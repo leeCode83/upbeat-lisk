@@ -9,8 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Search, Filter, Play, Pause } from "lucide-react";
+import { Search, Filter, Play, Pause, Music2, DollarSign, Activity, Layers } from "lucide-react";
 import { useState } from "react";
+
+const stats = [
+    { label: "Listed Tokens", value: "1,245", icon: Music2, color: "text-blue-400" },
+    { label: "Total Market Cap", value: "$45.2M", icon: DollarSign, color: "text-green-400" },
+    { label: "24h Volume", value: "$1.2M", icon: Activity, color: "text-purple-400" },
+    { label: "Onboarding", value: "15", icon: Layers, color: "text-pink-400" },
+];
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -101,27 +108,43 @@ export default function Tokenization() {
                     </p>
                 </div>
 
-                {/* Filters & Search */}
-                <div className="flex flex-col md:flex-row gap-4 mb-8">
-                    <div className="relative flex-grow">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
-                        <Input placeholder="Search artists, songs, or genres..." className="pl-10 bg-white/5 border-white/10" />
+                {/* Search Bar */}
+                <div className="max-w-2xl mx-auto mb-12 relative">
+                    <div className="relative group">
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative flex items-center bg-zinc-900 rounded-lg">
+                            <Search className="absolute left-4 text-zinc-400 group-hover:text-white transition-colors" size={24} />
+                            <Input
+                                placeholder="Search for your favorite artists, tracks, or investment opportunities..."
+                                className="w-full h-14 pl-12 pr-4 bg-transparent border-0 ring-0 focus-visible:ring-0 text-lg placeholder:text-zinc-500 text-white"
+                            />
+                            <div className="absolute right-2">
+                                <Button size="sm" className="bg-white/10 hover:bg-white/20 text-white font-medium rounded-md h-10 px-6">
+                                    Search
+                                </Button>
+                            </div>
+                        </div>
                     </div>
-                    <Button variant="outline" className="border-white/10 gap-2">
-                        <Filter size={20} /> Filters
-                    </Button>
-                    <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
-                        {["All", "Pop", "Electronic", "Rock", "Hip-Hop", "Jazz"].map((genre) => (
-                            <Badge key={genre} variant="secondary" className="cursor-pointer hover:bg-primary hover:text-white transition-colors px-4 py-2">
-                                {genre}
-                            </Badge>
-                        ))}
-                    </div>
+                </div>
+
+                {/* Platform Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 max-w-7xl mx-auto">
+                    {stats.map((stat, index) => (
+                        <GlassCard key={index} className="p-4 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+                                <h3 className="text-2xl font-bold">{stat.value}</h3>
+                            </div>
+                            <div className={`p-3 rounded-full bg-white/5 ${stat.color}`}>
+                                <stat.icon size={24} />
+                            </div>
+                        </GlassCard>
+                    ))}
                 </div>
 
                 {/* Assets Grid */}
                 {/* Assets List */}
-                <GlassCard className="p-0 overflow-hidden">
+                <GlassCard className="p-0 overflow-hidden max-w-7xl mx-auto">
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-white/5 border-b border-white/10">
@@ -130,7 +153,6 @@ export default function Tokenization() {
                                     <th className="text-right p-4 text-sm font-medium text-muted-foreground">Price</th>
                                     <th className="text-right p-4 text-sm font-medium text-muted-foreground">Movement</th>
                                     <th className="text-right p-4 text-sm font-medium text-muted-foreground">ROI</th>
-                                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">Funded</th>
                                     <th className="p-4"></th>
                                 </tr>
                             </thead>
@@ -164,12 +186,6 @@ export default function Tokenization() {
                                         </td>
                                         <td className="p-4 text-right text-green-400 font-medium">
                                             {asset.roi}%
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <span className="text-sm font-medium">{asset.funded}%</span>
-                                                <Progress value={asset.funded} className="h-1.5 w-16" />
-                                            </div>
                                         </td>
                                         <td className="p-4 text-right">
                                             {/* Stop propagation so clicking the button doesn't trigger the row click twice if wired up, though here it's fine. 

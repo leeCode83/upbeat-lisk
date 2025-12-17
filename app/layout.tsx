@@ -3,6 +3,7 @@ import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Web3Provider } from "@/components/Web3Provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -27,6 +28,7 @@ export default function RootLayout({
         <Web3Provider>
           <Navbar />
           {children}
+          <Toaster position="bottom-right" />
         </Web3Provider>
       </body>
     </html>
