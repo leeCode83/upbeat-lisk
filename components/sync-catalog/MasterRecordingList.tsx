@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Play, Pause, ShoppingCart, Clock, Target, CheckCircle, Info } from "lucide-react";
+import { Play, Pause, ShoppingCart, CheckCircle, Clock } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -11,57 +11,73 @@ import { Label } from "@/components/ui/label";
 const recordingsData = [
     {
         id: 1,
-        title: "Sunset Boulevard",
-        artist: "City Lights",
-        genre: "Pop",
+        title: "Golden Hour",
+        artist: "Sunset Collective",
+        genre: "Chillhop",
+        bpm: 85,
         duration: "3:45",
-        price: "$500",
-        image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+        price: "$150",
+        image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60",
     },
     {
         id: 2,
-        title: "Electric Dreams",
-        artist: "Synth Wave",
-        genre: "Electronic",
-        duration: "4:20",
-        price: "$750",
-        image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+        title: "Neon Nights",
+        artist: "Cyberwave",
+        genre: "Synthwave",
+        bpm: 120,
+        duration: "4:02",
+        price: "$200",
+        image: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500&auto=format&fit=crop&q=60",
     },
     {
         id: 3,
-        title: "Acoustic Soul",
-        artist: "Wooden Guitar",
-        genre: "Folk",
-        duration: "3:10",
-        price: "$300",
-        image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+        title: "Deep Forests",
+        artist: "Nature Sounds",
+        genre: "Ambient",
+        bpm: 60,
+        duration: "5:15",
+        price: "$100",
+        image: "https://images.unsplash.com/photo-1634152962476-4b8a00e1915c?w=500&auto=format&fit=crop&q=60",
     },
     {
         id: 4,
-        title: "Heavy Metal Thunder",
-        artist: "Iron Clad",
-        genre: "Metal",
-        duration: "5:00",
-        price: "$600",
-        image: "https://images.unsplash.com/photo-1501612780327-45045538702b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+        title: "Street Hustle",
+        artist: "Urban Beats",
+        genre: "Hip Hop",
+        bpm: 95,
+        duration: "3:10",
+        price: "$250",
+        image: "https://images.unsplash.com/photo-1642132652859-3ef5a9216fd2?w=500&auto=format&fit=crop&q=60",
     },
     {
         id: 5,
-        title: "Jazz Cafe",
-        artist: "Smooth Sax",
-        genre: "Jazz",
-        duration: "4:15",
-        price: "$450",
-        image: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+        title: "Morning Coffee",
+        artist: "Acoustic Vibes",
+        genre: "Folk",
+        bpm: 100,
+        duration: "2:55",
+        price: "$120",
+        image: "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=500&auto=format&fit=crop&q=60",
     },
     {
         id: 6,
-        title: "Orchestral Epic",
-        artist: "Symphony X",
+        title: "High Voltage",
+        artist: "Rock Stars",
+        genre: "Rock",
+        bpm: 140,
+        duration: "3:30",
+        price: "$180",
+        image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=60",
+    },
+    {
+        id: 7,
+        title: "Piano Sonata",
+        artist: "Classical One",
         genre: "Classical",
-        duration: "6:30",
-        price: "$1200",
-        image: "https://images.unsplash.com/photo-1507838153414-b4b713384ebd?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+        bpm: 70,
+        duration: "6:10",
+        price: "$300",
+        image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=500&auto=format&fit=crop&q=60",
     },
 ];
 
@@ -97,36 +113,38 @@ export function MasterRecordingList() {
     };
 
     return (
-        <div className="py-10">
-            <h2 className="text-3xl font-bold mb-8">Available Master Recordings</h2>
-
-            <div className="flex flex-col space-y-2">
+        <div className="py-2">
+            <div className="flex flex-col space-y-1">
                 {/* Header Row */}
-                <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 px-4 py-2 text-sm text-muted-foreground border-b border-white/10 uppercase tracking-wider">
-                    <div className="w-12 text-center">#</div>
-                    <div>Title</div>
-                    <div className="text-right w-24">Duration</div>
-                    <div className="text-right w-32">License</div>
+                <div className="grid grid-cols-[50px_2fr_1fr_1fr_1fr_1fr_100px] gap-4 px-4 py-3 text-sm font-medium text-muted-foreground border-b border-white/5 uppercase tracking-wider">
+                    <div className="text-center">#</div>
+                    <div className="pl-4">Track</div>
+                    <div>Genre</div>
+                    <div className="text-center">BPM</div>
+                    <div className="text-right">Duration</div>
+                    <div className="text-right">License Fee</div>
+                    <div className="text-right">Action</div>
                 </div>
 
                 {recordingsData.map((item, index) => (
                     <div
                         key={item.id}
-                        className="group grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center px-4 py-3 rounded-lg hover:bg-white/5 transition-colors"
+                        className="group grid grid-cols-[50px_2fr_1fr_1fr_1fr_1fr_100px] gap-4 items-center px-4 py-3 hover:bg-white/5 transition-colors rounded-lg text-sm"
                     >
-                        {/* Play/Index Column */}
-                        <div className="w-12 flex justify-center">
+                        {/* Index Column */}
+                        <div className="text-center font-medium text-muted-foreground group-hover:text-white flex justify-center">
                             <button
                                 onClick={() => togglePlay(item.id)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-muted-foreground group-hover:text-white transition-colors"
+                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
                             >
-                                {playing === item.id ? <Pause size={16} /> : <Play size={16} />}
+                                {playing === item.id ? <Pause size={14} className="text-primary" /> : <span className="group-hover:hidden">{index + 1}</span>}
+                                {playing !== item.id && <Play size={14} className="hidden group-hover:block text-white" />}
                             </button>
                         </div>
 
-                        {/* Title & Artist Column */}
-                        <div className="flex items-center gap-4">
-                            <div className="relative h-12 w-12 rounded overflow-hidden flex-shrink-0">
+                        {/* Track Column */}
+                        <div className="flex items-center gap-3 pl-4">
+                            <div className="relative h-10 w-10 rounded overflow-hidden flex-shrink-0">
                                 <Image
                                     src={item.image}
                                     alt={item.title}
@@ -135,26 +153,32 @@ export function MasterRecordingList() {
                                 />
                             </div>
                             <div>
-                                <h3 className="font-bold text-base group-hover:text-primary transition-colors">{item.title}</h3>
-                                <p className="text-sm text-muted-foreground">{item.artist}</p>
+                                <h3 className="font-bold text-white leading-tight">{item.title}</h3>
+                                <p className="text-xs text-muted-foreground">{item.artist}</p>
                             </div>
                         </div>
 
-                        {/* Duration/Genre Column */}
-                        <div className="text-right w-24 text-sm text-muted-foreground">
-                            {item.duration}
-                        </div>
+                        {/* Genre */}
+                        <div className="text-muted-foreground">{item.genre}</div>
 
-                        {/* Price & Action Column */}
-                        <div className="text-right w-32 flex items-center justify-end gap-4">
-                            <span className="font-bold text-primary">{item.price}</span>
+                        {/* BPM */}
+                        <div className="text-center text-muted-foreground">{item.bpm}</div>
+
+                        {/* Duration */}
+                        <div className="text-right text-muted-foreground">{item.duration}</div>
+
+                        {/* Price */}
+                        <div className="text-right font-bold text-primary">{item.price}</div>
+
+                        {/* Action */}
+                        <div className="text-right flex justify-end">
                             <Button
                                 size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 rounded-full hover:bg-primary hover:text-white"
+                                variant="secondary"
+                                className="h-8 px-3 text-xs bg-white/10 hover:bg-primary hover:text-white transition-colors"
                                 onClick={() => handlePurchaseClick(item)}
                             >
-                                <ShoppingCart size={16} />
+                                License
                             </Button>
                         </div>
                     </div>
@@ -165,36 +189,26 @@ export function MasterRecordingList() {
             <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
                 <DialogContent className="sm:max-w-md bg-zinc-900 border-white/10 text-white">
                     <DialogHeader>
-                        <DialogTitle>Complete Purchase</DialogTitle>
+                        <DialogTitle>Complete License Purchase</DialogTitle>
                         <DialogDescription className="text-zinc-400">
-                            Review the license details for <strong>{selectedRecording?.title}</strong>.
+                            You are purchasing a perpetual license for <strong>{selectedRecording?.title}</strong> by {selectedRecording?.artist}.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
                         <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                            <span className="text-muted-foreground">Price</span>
+                            <span className="text-muted-foreground">Total Fee</span>
                             <span className="font-bold text-xl text-primary">{selectedRecording?.price}</span>
                         </div>
 
                         <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm font-medium">
                                 <Clock size={16} className="text-primary" />
-                                <span>License Validity</span>
-                            </div>
-                            <div className="p-3 bg-white/5 rounded-lg text-sm text-zinc-300 border border-white/5">
-                                Perpetual (Lifetime)
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm font-medium">
-                                <Target size={16} className="text-primary" />
-                                <Label htmlFor="purpose">Usage Purpose</Label>
+                                <Label htmlFor="purpose">Usage / Project Name</Label>
                             </div>
                             <Input
                                 id="purpose"
-                                placeholder="e.g. Commercial, YouTube Video, Film"
+                                placeholder="e.g. YouTube Vlog #42"
                                 className="bg-white/5 border-white/10"
                                 value={purchasePurpose}
                                 onChange={(e) => setPurchasePurpose(e.target.value)}
@@ -204,7 +218,7 @@ export function MasterRecordingList() {
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsPurchaseModalOpen(false)} className="border-white/10 hover:bg-white/10 text-white">Cancel</Button>
-                        <Button onClick={confirmPurchase} className="bg-primary hover:bg-primary/90">Confirm Purchase</Button>
+                        <Button onClick={confirmPurchase} className="bg-primary hover:bg-primary/90">Confirm License</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -215,10 +229,10 @@ export function MasterRecordingList() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <CheckCircle className="text-green-500" size={24} />
-                            Transaction Successful
+                            License Acquired
                         </DialogTitle>
                         <DialogDescription className="text-zinc-400 pt-2">
-                            You have successfully purchased the license for <strong>{selectedRecording?.title}</strong>.
+                            The license for <strong>{selectedRecording?.title}</strong> has been minted to your wallet.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -231,6 +245,7 @@ export function MasterRecordingList() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
         </div>
     );
 }

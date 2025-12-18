@@ -1,88 +1,60 @@
 "use client";
 
 import { Footer } from "@/components/layout/Footer";
-import { HallOfFameCarousel } from "@/components/sync-catalog/HallOfFameCarousel";
 import { MasterRecordingList } from "@/components/sync-catalog/MasterRecordingList";
-import { GradientText } from "@/components/shared/GradientText";
-import { motion } from "framer-motion";
+import { SearchBar } from "@/components/sync-catalog/SearchBar";
+import { TopMusicCarousel } from "@/components/sync-catalog/TopMusicCarousel";
+import { useState } from "react";
 
 export default function SyncCatalog() {
+    const [activeSection, setActiveSection] = useState("Featured Tracks");
+    const [activeCategory, setActiveCategory] = useState("All Genres");
+
+    const categories = ["All Genres", "Vocals", "Instrumental", "Moods", "Acoustic", "Electronic"];
+
     return (
         <div className="min-h-screen flex flex-col bg-background text-foreground">
-            <main className="flex-grow">
-                {/* Header Section */}
-                {/* Header Section */}
-                <section className="relative h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden">
-                    {/* Background Image */}
-                    <div className="absolute inset-0 z-0">
-                        <img
-                            src="/images/sync-catalog-header-bg.png"
-                            alt="Sync Catalog Background"
-                            className="w-full h-full object-cover opacity-60"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/60 to-background" />
-                    </div>
-
-                    {/* Animated Content */}
-                    <div className="relative z-10 container mx-auto px-4 text-center">
-                        <motion.div
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, ease: "easeOut" }}
-                        >
-                            <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
-                                Sync <GradientText>Catalog</GradientText>
-                            </h1>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-                        >
-                            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed">
-                                Discover premium master recordings for your next film, game, or commercial project.
-                                <br className="hidden md:block" />
-                                <span className="text-foreground font-medium">Direct licensing on the blockchain.</span>
-                            </p>
-                        </motion.div>
-
-                        {/* Interactive Floating Elements */}
-                        <motion.div
-                            className="absolute top-1/4 left-10 w-32 h-32 bg-primary/30 rounded-full blur-3xl"
-                            animate={{
-                                x: [0, 30, 0],
-                                y: [0, -30, 0],
-                            }}
-                            transition={{
-                                duration: 8,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                            }}
-                        />
-                        <motion.div
-                            className="absolute bottom-1/4 right-10 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl"
-                            animate={{
-                                x: [0, -40, 0],
-                                y: [0, 40, 0],
-                            }}
-                            transition={{
-                                duration: 10,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                                delay: 1,
-                            }}
-                        />
-                    </div>
+            <main className="flex-grow pt-8">
+                {/* Search & Filter Section */}
+                <section className="container mx-auto px-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-white/5 pb-2">
+                    <SearchBar />
                 </section>
 
-                {/* Hall of Fame Carousel */}
-                <section className="mb-10 container mx-auto px-4">
-                    <HallOfFameCarousel />
+                {/* Top Music Carousel Section */}
+                <section className="container mx-auto px-4 mt-6">
+                    <div className="flex items-center gap-4 mb-4">
+                        {["Featured Tracks", "New Arrivals"].map((section) => (
+                            <h2
+                                key={section}
+                                onClick={() => setActiveSection(section)}
+                                className={`text-xl font-bold pb-1 cursor-pointer transition-colors ${activeSection === section
+                                        ? "border-b-2 border-primary text-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
+                                    }`}
+                            >
+                                {section}
+                            </h2>
+                        ))}
+                    </div>
+                    <TopMusicCarousel />
                 </section>
 
-                {/* Catalog List */}
-                <section className="container mx-auto px-4 pb-20">
+                {/* Song List / Leaderboard Section */}
+                <section className="container mx-auto px-4 mt-8 pb-20">
+                    <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+                        {categories.map((category) => (
+                            <button
+                                key={category}
+                                onClick={() => setActiveCategory(category)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeCategory === category
+                                        ? "bg-white/10 text-white"
+                                        : "hover:bg-white/5 text-muted-foreground hover:text-white"
+                                    }`}
+                            >
+                                {category}
+                            </button>
+                        ))}
+                    </div>
                     <MasterRecordingList />
                 </section>
             </main>
