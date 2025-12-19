@@ -43,7 +43,7 @@ export default function Dashboard() {
                             </span>
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">Total Balance</p>
-                        <h3 className="text-2xl font-bold">$12,450.00</h3>
+                        <h3 className="text-2xl font-bold">12,450.00 USDC</h3>
                     </GlassCard>
 
                     <GlassCard>
@@ -92,155 +92,171 @@ export default function Dashboard() {
                 <Tabs defaultValue="portfolio" className="space-y-6">
                     <TabsList className="bg-white/5 border border-white/10 p-1">
                         <TabsTrigger value="portfolio">My Portfolio</TabsTrigger>
-
+                        <TabsTrigger value="tokenize">My Tokenize</TabsTrigger>
                         <TabsTrigger value="activity">Activity</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="portfolio" className="space-y-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold">Your Assets</h2>
-                            <div className="flex gap-2">
-                                <Input placeholder="Search assets..." className="w-64 bg-white/5 border-white/10" />
+                    <TabsContent value="tokenize" className="space-y-8">
+                        {/* Section 0: Pending Tokenization */}
+                        <div>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
+                                    Pending Tokenization
+                                </h3>
+                            </div>
+                            <div className="space-y-4">
+                                {[
+                                    { id: 0, title: "Lost in Echoes", stage: "Minting Policy ID", progress: 75, date: "2024-12-19" },
+                                    { id: 1, title: "Solar Flares", stage: "Metadata Verification", progress: 40, date: "2024-12-18" }
+                                ].map((item) => (
+                                    <GlassCard key={item.id} className="flex items-center gap-4 p-4 border-l-4 border-l-yellow-500">
+                                        <div className="h-12 w-12 rounded-lg bg-yellow-500/20 flex items-center justify-center text-yellow-500">
+                                            <Disc size={24} className="animate-spin-slow" />
+                                        </div>
+                                        <div className="flex-grow">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <div>
+                                                    <div className="font-bold">{item.title}</div>
+                                                    <div className="text-xs text-muted-foreground">Started: {item.date}</div>
+                                                </div>
+                                                <span className="text-xs font-medium text-yellow-500 px-2 py-1 bg-yellow-500/10 rounded-full">
+                                                    {item.stage}
+                                                </span>
+                                            </div>
+                                            <div className="w-full bg-white/10 rounded-full h-1.5 mt-2">
+                                                <div
+                                                    className="bg-yellow-500 h-1.5 rounded-full transition-all duration-1000"
+                                                    style={{ width: `${item.progress}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </GlassCard>
+                                ))}
                             </div>
                         </div>
 
-                        <GlassCard className="p-0 overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-white/5 border-b border-white/10">
+                        {/* Section 1: Tokenized User Songs */}
+                        <div>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    <Disc size={20} className="text-pink-500" />
+                                    Your Tokenized Songs
+                                </h3>
+                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                                    View All
+                                </Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[
+                                    { id: 101, title: "Midnight Dreams", ticker: "MND", price: 50.00, change: 12.5, image: "bg-gradient-to-br from-purple-500 to-pink-500" },
+                                    { id: 102, title: "Neon City Lights", ticker: "NCL", price: 35.00, change: -2.4, image: "bg-gradient-to-br from-fuchsia-600 to-purple-600" },
+                                    { id: 103, title: "Cyber Punk 2077", ticker: "CPK", price: 85.00, change: 15.4, image: "bg-gradient-to-br from-pink-500 to-rose-600" }
+                                ].map((item) => (
+                                    <GlassCard key={item.id} className="p-4 hover:bg-white/5 transition-colors cursor-pointer group">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className={`h-10 w-10 rounded-full ${item.image} flex items-center justify-center text-xs font-bold shadow-lg`}>
+                                                {item.ticker[0]}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold group-hover:text-primary transition-colors">{item.title}</div>
+                                                <div className="text-xs text-muted-foreground">{item.ticker}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-end">
+                                            <div>
+                                                <div className="text-xs text-muted-foreground mb-1">Current Price</div>
+                                                <div className="font-bold">${item.price.toFixed(2)}</div>
+                                            </div>
+                                            <div className={`text-xs font-medium ${item.change >= 0 ? 'text-green-400' : 'text-red-400'} flex items-center`}>
+                                                {item.change >= 0 ? '+' : ''}{item.change}%
+                                                {item.change >= 0 ? <ArrowUpRight size={12} className="ml-1" /> : null}
+                                            </div>
+                                        </div>
+                                    </GlassCard>
+                                ))}
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="portfolio" className="space-y-8">
+
+                        {/* Section 2: Purchased Tokens */}
+                        <div>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    <Wallet size={20} className="text-green-400" />
+                                    Purchased Tokens
+                                </h3>
+                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                                    View All
+                                </Button>
+                            </div>
+                            <div className="overflow-x-auto rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-white/5 text-muted-foreground text-left">
                                         <tr>
-                                            <th className="text-left p-4 text-sm font-medium text-muted-foreground">Asset</th>
-                                            <th className="text-right p-4 text-sm font-medium text-muted-foreground">Price</th>
-                                            <th className="text-right p-4 text-sm font-medium text-muted-foreground">24h Change</th>
-                                            <th className="text-right p-4 text-sm font-medium text-muted-foreground">Market Cap</th>
-                                            <th className="p-4"></th>
+                                            <th className="p-3 font-medium">Token</th>
+                                            <th className="p-3 font-medium text-right">Balance</th>
+                                            <th className="p-3 font-medium text-right">Value</th>
+                                            <th className="p-3 font-medium text-right">Change</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {[
-                                            {
-                                                id: 1,
-                                                name: "Midnight Dreams",
-                                                ticker: "MND",
-                                                price: 50.00,
-                                                marketCap: 500000,
-                                                change24h: 12.5,
-                                                image: "bg-gradient-to-br from-purple-500 to-pink-500"
-                                            },
-                                            {
-                                                id: 2,
-                                                name: "Neon City Lights",
-                                                ticker: "NCL",
-                                                price: 35.00,
-                                                marketCap: 350000,
-                                                change24h: -2.4,
-                                                image: "bg-gradient-to-br from-fuchsia-600 to-purple-600"
-                                            },
-                                            {
-                                                id: 3,
-                                                name: "Acoustic Soul",
-                                                ticker: "ACS",
-                                                price: 25.00,
-                                                marketCap: 250000,
-                                                change24h: 5.8,
-                                                image: "bg-gradient-to-br from-pink-500 to-rose-500"
-                                            },
-                                            {
-                                                id: 4,
-                                                name: "Electric Horizon",
-                                                ticker: "ELH",
-                                                price: 42.50,
-                                                marketCap: 425000,
-                                                change24h: 8.2,
-                                                image: "bg-gradient-to-br from-purple-400 to-pink-400"
-                                            },
-                                            {
-                                                id: 5,
-                                                name: "Jazz Cafe",
-                                                ticker: "JZC",
-                                                price: 60.00,
-                                                marketCap: 600000,
-                                                change24h: 1.5,
-                                                image: "bg-gradient-to-br from-rose-400 to-pink-600"
-                                            },
-                                            {
-                                                id: 6,
-                                                name: "Lo-Fi Study Beats",
-                                                ticker: "LFS",
-                                                price: 18.75,
-                                                marketCap: 187500,
-                                                change24h: -0.8,
-                                                image: "bg-gradient-to-br from-purple-300 to-pink-300"
-                                            },
-                                            {
-                                                id: 7,
-                                                name: "Cyber Punk 2077",
-                                                ticker: "CPK",
-                                                price: 85.00,
-                                                marketCap: 850000,
-                                                change24h: 15.4,
-                                                image: "bg-gradient-to-br from-pink-500 to-rose-600"
-                                            },
-                                            {
-                                                id: 8,
-                                                name: "Classical Symphony",
-                                                ticker: "CLS",
-                                                price: 120.00,
-                                                marketCap: 1200000,
-                                                change24h: 3.2,
-                                                image: "bg-gradient-to-br from-purple-800 to-fuchsia-900"
-                                            },
-                                            {
-                                                id: 9,
-                                                name: "Hip Hop Flow",
-                                                ticker: "HHF",
-                                                price: 55.50,
-                                                marketCap: 555000,
-                                                change24h: 6.7,
-                                                image: "bg-gradient-to-br from-rose-500 to-pink-600"
-                                            },
-                                            {
-                                                id: 10,
-                                                name: "Ambient Soundscapes",
-                                                ticker: "AMB",
-                                                price: 22.00,
-                                                marketCap: 220000,
-                                                change24h: -1.2,
-                                                image: "bg-gradient-to-br from-purple-400 to-pink-500"
-                                            }
-                                        ].map((item) => (
-                                            <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`h-10 w-10 rounded-full ${item.image} flex items-center justify-center text-xs font-bold`}>
-                                                            {item.ticker[0]}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-bold">{item.name}</div>
-                                                            <div className="text-xs text-muted-foreground">{item.ticker}</div>
-                                                        </div>
-                                                    </div>
+                                            { id: 201, name: "Acoustic Soul", ticker: "ACS", balance: 50, price: 25.00, change: 5.8 },
+                                            { id: 202, name: "Electric Horizon", ticker: "ELH", balance: 20, price: 42.50, change: 8.2 },
+                                            { id: 203, name: "Jazz Cafe", ticker: "JZC", balance: 10, price: 60.00, change: 1.5 },
+                                        ].map((token) => (
+                                            <tr key={token.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                                                <td className="p-3">
+                                                    <div className="font-medium">{token.name}</div>
+                                                    <div className="text-xs text-muted-foreground">{token.ticker}</div>
                                                 </td>
-                                                <td className="p-4 text-right font-medium">
-                                                    ${item.price.toFixed(2)}
-                                                </td>
-                                                <td className={`p-4 text-right font-medium ${item.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                    {item.change24h >= 0 ? '+' : ''}{item.change24h}%
-                                                </td>
-                                                <td className="p-4 text-right text-muted-foreground">
-                                                    ${item.marketCap.toLocaleString('en-US')}
-                                                </td>
-                                                <td className="p-4 text-right">
-                                                    <Button asChild variant="ghost" size="sm">
-                                                        <Link href={`/tokenization/${item.id}`}>Detail</Link>
-                                                    </Button>
+                                                <td className="p-3 text-right">{token.balance}</td>
+                                                <td className="p-3 text-right font-medium">${(token.balance * token.price).toLocaleString()}</td>
+                                                <td className={`p-3 text-right ${token.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                    {token.change >= 0 ? '+' : ''}{token.change}%
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                        </GlassCard>
+                        </div>
+
+                        {/* Section 3: Owned License NFTs */}
+                        <div>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    <Music size={20} className="text-blue-400" />
+                                    Owned Licenses
+                                </h3>
+                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                                    View All
+                                </Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {[
+                                    { id: 301, track: "Summer Vibes", type: "Commercial Use", user: "BeatMaster", date: "2024-12-10" },
+                                    { id: 302, track: "Corporate Motivation", type: "Sync License", user: "MelodyMaker", date: "2024-11-25" }
+                                ].map((license) => (
+                                    <div key={license.id} className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors">
+                                        <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex-shrink-0 flex items-center justify-center">
+                                            <Music size={24} className="text-white" />
+                                        </div>
+                                        <div className="flex-grow">
+                                            <div className="font-bold text-lg">{license.track}</div>
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded text-xs">{license.type}</span>
+                                                <span>• {license.date}</span>
+                                            </div>
+                                        </div>
+                                        <Button size="sm" variant="outline" className="border-white/10">View</Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </TabsContent>
 
 

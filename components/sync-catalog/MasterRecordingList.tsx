@@ -174,8 +174,8 @@ export function MasterRecordingList() {
                         <div className="text-right flex justify-end">
                             <Button
                                 size="sm"
-                                variant="secondary"
-                                className="h-8 px-3 text-xs bg-white/10 hover:bg-primary hover:text-white transition-colors"
+                                variant="default"
+                                className="h-8 px-3 text-xs bg-primary text-white hover:bg-primary/90 transition-colors shadow-md"
                                 onClick={() => handlePurchaseClick(item)}
                             >
                                 License
