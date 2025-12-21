@@ -20,79 +20,31 @@ const stats = [
 ];
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { usePlatform } from "@/hooks/usePlatform";
+import { useReadContracts } from "wagmi";
+import { TOKEN_ABI, Listing } from "@/lib/contracts"; // Added Listing import
+import { formatUnits } from "viem";
 
-const mockAssets = [
-    {
-        id: 1,
-        title: "Midnight Dreams",
-        artist: "Luna Eclipse",
-        genre: "Pop",
-        price: 50,
-        roi: 12.5,
-        change24h: 2.5,
-        funded: 75,
-        image: "bg-gradient-to-br from-purple-500 to-pink-500",
-    },
-    {
-        id: 2,
-        title: "Neon City Lights",
-        artist: "The Cyberpunks",
-        genre: "Electronic",
-        price: 35,
-        roi: 15.2,
-        change24h: -1.2,
-        funded: 40,
-        image: "bg-gradient-to-br from-fuchsia-600 to-purple-600",
-    },
-    {
-        id: 3,
-        title: "Acoustic Soul",
-        artist: "Sarah Jenkins",
-        genre: "Indie",
-        price: 25,
-        roi: 8.5,
-        change24h: 0.8,
-        funded: 90,
-        image: "bg-gradient-to-br from-pink-500 to-rose-500",
-    },
-    {
-        id: 4,
-        title: "Heavy Metal Thunder",
-        artist: "Iron Forge",
-        genre: "Rock",
-        price: 45,
-        roi: 11.0,
-        change24h: 3.4,
-        funded: 20,
-        image: "bg-gradient-to-br from-purple-900 to-fuchsia-900",
-    },
-    {
-        id: 5,
-        title: "Jazz Cafe",
-        artist: "Blue Note Quartet",
-        genre: "Jazz",
-        price: 60,
-        roi: 9.8,
-        change24h: -0.5,
-        funded: 60,
-        image: "bg-gradient-to-br from-rose-400 to-pink-600",
-    },
-    {
-        id: 6,
-        title: "Summer Vibes",
-        artist: "DJ Sunny",
-        genre: "House",
-        price: 40,
-        roi: 13.5,
-        change24h: 1.2,
-        funded: 10,
-        image: "bg-gradient-to-br from-purple-400 to-pink-300",
-    },
-];
+// mockAssets removed
+
 
 export default function Tokenization() {
-    const [playing, setPlaying] = useState<number | null>(null);
     const router = useRouter();
+    const { useGetAllListings } = usePlatform();
+    const { data: listings, isLoading: isListingsLoading } = useGetAllListings();
+
+    const activeListings = listings?.filter((l: Listing) => l.active) || [];
+
+    // Fetch token details for all active listings
+    const { data: tokenData, isLoading: isTokenDataLoading } = useReadContracts({
+        contracts: activeListings.map((listing) => ({
+            address: listing.tokenAddress as `0x${string}`,
+            abi: TOKEN_ABI,
+            functionName: "name",
+        })),
+    });
+
+    const isLoading = isListingsLoading || isTokenDataLoading;
 
     return (
         <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -151,51 +103,63 @@ export default function Tokenization() {
                                 <tr>
                                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Asset</th>
                                     <th className="text-right p-4 text-sm font-medium text-muted-foreground">Price</th>
-                                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">Movement</th>
-                                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">ROI</th>
+                                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">Amount Available</th>
                                     <th className="p-4"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {mockAssets.map((asset, index) => (
-                                    <motion.tr
-                                        key={asset.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                                        whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
-                                        className="border-b border-white/5 cursor-pointer relative"
-                                        onClick={() => router.push(`/tokenization/${asset.id}`)}
-                                    >
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`h-10 w-10 rounded-full ${asset.image} flex items-center justify-center text-xs font-bold`}>
-                                                    {asset.title[0]}
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold">{asset.title}</div>
-                                                    <div className="text-xs text-muted-foreground">{asset.artist}</div>
-                                                </div>
-                                            </div>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                            Loading listings...
                                         </td>
-                                        <td className="p-4 text-right font-medium">
-                                            ${asset.price.toFixed(2)}
+                                    </tr>
+                                ) : activeListings && activeListings.length > 0 ? (
+                                    activeListings.map((listing: Listing, index: number) => {
+                                        const tokenName = tokenData?.[index]?.result as string || "Unknown Token";
+
+                                        return (
+                                            <motion.tr
+                                                key={index}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.3, delay: index * 0.1 }}
+                                                whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+                                                className="border-b border-white/5 cursor-pointer relative"
+                                                onClick={() => router.push(`/tokenization/${index}`)}
+                                            >
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold`}>
+                                                            {tokenName[0]}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold">{tokenName}</div>
+                                                            <div className="text-xs text-muted-foreground truncate max-w-[150px]">{listing.tokenAddress}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-right font-medium">
+                                                    ${formatUnits(listing.pricePerToken as unknown as bigint, 6)} USDC
+                                                </td>
+                                                <td className="p-4 text-right font-medium">
+                                                    {formatUnits(listing.amount as unknown as bigint, 18)}
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <Button asChild variant="ghost" size="sm">
+                                                        <Link href={`/tokenization/${index}`} onClick={(e) => e.stopPropagation()}>Detail</Link>
+                                                    </Button>
+                                                </td>
+                                            </motion.tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                            No tokens listed yet.
                                         </td>
-                                        <td className={`p-4 text-right font-medium ${asset.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {asset.change24h >= 0 ? '+' : ''}{asset.change24h}%
-                                        </td>
-                                        <td className="p-4 text-right text-green-400 font-medium">
-                                            {asset.roi}%
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            {/* Stop propagation so clicking the button doesn't trigger the row click twice if wired up, though here it's fine. 
-                                                Actually, adding Link back makes the button work independently even if row fails. */}
-                                            <Button asChild variant="ghost" size="sm">
-                                                <Link href={`/tokenization/${asset.id}`} onClick={(e) => e.stopPropagation()}>Detail</Link>
-                                            </Button>
-                                        </td>
-                                    </motion.tr>
-                                ))}
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

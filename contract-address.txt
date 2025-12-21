@@ -1,0 +1,3 @@
+MockUSDC Deployed at: 0xB84BbbA3950098954257bDbcC3Aa86C01aAcD965
+MusicPlatform Deployed at: 0x855547B9e2f4035E2cfe95ba18e903DFdD51C8E9
+Sample MusicToken Deployed at: 0xC58054f15Cd08c242261826195d5bbECaC29EfAa
