@@ -261,70 +261,61 @@ export default function CreateTokenizationPage() {
                                 ) : (
                                     <div className="grid gap-6">
                                         {userTokens.map((token: any) => (
-                                            <GlassCard key={token.tokenAddress} className="p-6">
-                                                <div className="flex flex-col md:flex-row gap-6">
-                                                    <div className="flex-1 space-y-4">
-                                                        <div>
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center font-bold text-white">
-                                                                    {token.symbol[0]}
-                                                                </div>
-                                                                <div>
-                                                                    <h3 className="text-xl font-bold">{token.name}</h3>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-sm font-mono text-muted-foreground bg-black/20 px-2 py-0.5 rounded">
-                                                                            {token.symbol}
-                                                                        </span>
-                                                                        <span className="text-xs text-muted-foreground break-all">
-                                                                            {token.tokenAddress}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                            <GlassCard key={token.tokenAddress} className="p-6 relative overflow-hidden group">
+                                                {/* Decorative background gradient */}
+                                                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                                                {/* Header: Title and Balance */}
+                                                <div className="flex justify-between items-start mb-1 relative z-10">
+                                                    <h3 className="text-2xl font-bold font-handwriting">{token.name}</h3>
+                                                    <div className="text-right">
+                                                        <span className="text-xs text-muted-foreground block">Token Balance</span>
+                                                        <span className="font-mono font-bold text-primary">
+                                                            {token.balance ? formatUnits(token.balance, 18) : "0"} {token.symbol}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Address */}
+                                                <div className="mb-6 relative z-10">
+                                                    <p className="text-xs text-muted-foreground font-mono break-all opacity-70">
+                                                        {token.tokenAddress}
+                                                    </p>
+                                                </div>
+
+                                                {/* Listing Form */}
+                                                <form onSubmit={(e) => handleListToken(e, token)} className="space-y-4 relative z-10">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-xs font-medium text-muted-foreground ml-1">Amount to list</label>
+                                                            <Input
+                                                                type="number"
+                                                                className="bg-white/5 border-white/10"
+                                                                value={listings[token.tokenAddress]?.amount || ""}
+                                                                onChange={(e) => handleListingChange(token.tokenAddress, 'amount', e.target.value)}
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-xs font-medium text-muted-foreground ml-1">Token Price (USDC)</label>
+                                                            <Input
+                                                                type="number"
+                                                                className="bg-white/5 border-white/10"
+                                                                value={listings[token.tokenAddress]?.price || ""}
+                                                                onChange={(e) => handleListingChange(token.tokenAddress, 'price', e.target.value)}
+                                                                required
+                                                            />
                                                         </div>
                                                     </div>
 
-                                                    <div className="md:w-1/2 lg:w-2/5 p-4 rounded-xl bg-white/5 border border-white/10">
-                                                        <h4 className="font-semibold mb-4 flex items-center gap-2 text-primary">
-                                                            <ListPlus size={18} />
-                                                            List on Marketplace
-                                                        </h4>
-                                                        <form onSubmit={(e) => handleListToken(e, token)} className="space-y-4">
-                                                            <div className="grid grid-cols-2 gap-3">
-                                                                <div className="space-y-1">
-                                                                    <label className="text-xs font-medium text-muted-foreground">Amount</label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        placeholder="0.00"
-                                                                        className="h-9 bg-black/20 border-white/10 text-sm"
-                                                                        value={listings[token.tokenAddress]?.amount || ""}
-                                                                        onChange={(e) => handleListingChange(token.tokenAddress, 'amount', e.target.value)}
-                                                                        required
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    <label className="text-xs font-medium text-muted-foreground">Price (USDC)</label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        placeholder="0.00"
-                                                                        className="h-9 bg-black/20 border-white/10 text-sm"
-                                                                        value={listings[token.tokenAddress]?.price || ""}
-                                                                        onChange={(e) => handleListingChange(token.tokenAddress, 'price', e.target.value)}
-                                                                        required
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                            <Button
-                                                                type="submit"
-                                                                className="w-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20"
-                                                                size="sm"
-                                                                disabled={isLoading}
-                                                            >
-                                                                {isLoading ? "Processing..." : "Approve & List"}
-                                                            </Button>
-                                                        </form>
-                                                    </div>
-                                                </div>
+                                                    <Button
+                                                        type="submit"
+                                                        className="w-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 mt-2"
+                                                        disabled={isLoading}
+                                                    >
+                                                        {isLoading ? "Processing..." : "Approve & List"}
+                                                    </Button>
+                                                </form>
                                             </GlassCard>
                                         ))}
                                     </div>

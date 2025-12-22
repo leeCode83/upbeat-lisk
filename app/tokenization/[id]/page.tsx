@@ -9,22 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { Play, Pause, ArrowLeft, Share2, Heart, Clock, DollarSign, TrendingUp, Users, Wallet, Zap, Ticket, Vote, Gift } from "lucide-react";
 import { useState, use, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { StreamingChart } from "@/components/charts/StreamingChart";
 import { toast } from "sonner";
+import { usePlatform } from "@/hooks/usePlatform";
+import { useAccount, useReadContract } from "wagmi";
+import { formatUnits, parseUnits, Address } from "viem";
+import { TOKEN_ABI, USDC_ABI, USDC_ADDRESS, PLATFORM_ADDRESS } from "@/lib/contracts";
 
 // Single Mock Token Data
 const tokenData = {
@@ -80,62 +74,113 @@ const mockOrderBook = {
 };
 
 export default function TokenDetail({ params }: { params: Promise<{ id: string }> }) {
-    // We ignore the actual ID param for now as we only have one mock token
+    // We use the ID from params to fetch the listing
     const resolvedParams = use(params);
-    const asset = tokenData;
+    const listingId = BigInt(resolvedParams.id);
+
+    const { address } = useAccount();
+    const { useGetListing, buyToken, approveToken } = usePlatform();
+
+    // Fetch Listing Data
+    const { data: listingData, isLoading: isListingLoading } = useGetListing(listingId);
+
+    // Safely cast listing data
+    const listing = listingData as any;
+
+    // Fetch Token Details (Name, Symbol)
+    const { data: tokenName } = useReadContract({
+        address: listing?.tokenAddress,
+        abi: TOKEN_ABI,
+        functionName: "name",
+        query: { enabled: !!listing?.tokenAddress }
+    });
+
+    const { data: tokenSymbol } = useReadContract({
+        address: listing?.tokenAddress,
+        abi: TOKEN_ABI,
+        functionName: "symbol",
+        query: { enabled: !!listing?.tokenAddress }
+    });
+
+    // Fetch User USDC Balance
+    const { data: usdcBalance, refetch: refetchUsdcBalance } = useReadContract({
+        address: USDC_ADDRESS as Address,
+        abi: USDC_ABI,
+        functionName: "balanceOf",
+        args: [address as Address],
+        query: { enabled: !!address }
+    });
 
     const [playing, setPlaying] = useState(false);
-    const [progress, setProgress] = useState(0);
 
     const router = useRouter();
-    const [amount, setAmount] = useState(10);
+    const [usdcAmount, setUsdcAmount] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
-    const [activeTab, setActiveTab] = useState("buy");
 
-    // Recalculate cost based on input
-    const totalCost = amount * asset.price;
+    // Derived State
+    const pricePerToken = listing?.pricePerToken ? Number(formatUnits(listing.pricePerToken, 6)) : 0;
+    const availableTokens = listing?.amount ? Number(formatUnits(listing.amount, 18)) : 0;
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setProgress(asset.funded);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [asset.funded]);
+    const estimatedTokens = (usdcAmount && pricePerToken > 0)
+        ? Number(usdcAmount) / pricePerToken
+        : 0;
 
-    const handleTrade = async () => {
+    // Merge Mock Data with Real Data
+    const asset = {
+        ...tokenData,
+        title: tokenName as string || "Loading...",
+        artist: listing?.seller || "Unknown Artist",
+        price: pricePerToken,
+        tokenAddress: listing?.tokenAddress,
+        availableTokens: availableTokens,
+        totalTokens: availableTokens, // Using available as total for now or fetch maxSupply
+    };
+
+    const handleBuy = async () => {
+        if (!usdcAmount || !listing) return;
         setIsProcessing(true);
-        // Simulate API Processing
-        await new Promise(resolve => setTimeout(resolve, 1500));
 
-        setIsProcessing(false);
+        try {
+            const usdcAmountWei = parseUnits(usdcAmount, 6);
 
-        // Use a simple random success/fail simulation for demonstration, 
-        // or default to success as the previous code did, but with toast.
-        // The user asked "jika berhasil ... hijau, dan merah jika gagal".
-        // I'll default to success for now as it's a happy path demo.
-        const success = true;
+            // 1. Approve USDC
+            const approved = await approveToken(USDC_ADDRESS as Address, PLATFORM_ADDRESS as Address, usdcAmountWei);
+            if (!approved) throw new Error("Approval failed");
 
-        if (success) {
-            toast.success(`Market ${activeTab === 'buy' ? 'Buy' : 'Sell'} Order Filled`, {
-                description: `Successfully ${activeTab === 'buy' ? 'bought' : 'sold'} ${amount} tokens for $${totalCost.toLocaleString()}`,
-                style: {
-                    background: '#09090b', // zinc-950
-                    border: '1px solid #22c55e', // green-500
-                    color: '#fff',
-                },
-            });
-            // router.refresh();
-        } else {
-            toast.error("Transaction Failed", {
-                description: "Could not place order. Please try again.",
-                style: {
-                    background: '#09090b',
-                    border: '1px solid #ef4444', // red-500
-                    color: '#fff',
-                },
-            });
+            // 2. Buy Token
+            const success = await buyToken(listingId, usdcAmountWei);
+
+            if (success) {
+                setUsdcAmount("");
+                refetchUsdcBalance();
+                // Optionally refetch listing to update available amount
+                router.refresh();
+            }
+        } catch (error) {
+            console.error("Buy failed:", error);
+        } finally {
+            setIsProcessing(false);
         }
     };
+
+    if (isListingLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+                <p>Loading token details...</p>
+            </div>
+        );
+    }
+
+    if (!listing || !listing.active) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-4">
+                <p>Listing not found or inactive.</p>
+                <Link href="/tokenization">
+                    <Button variant="outline">Back to Marketplace</Button>
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -151,7 +196,7 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                     {/* Left: Media & Key Actions */}
                     <div className="lg:col-span-1 space-y-6">
                         <GlassCard className="p-0 overflow-hidden">
-                            <div className={`aspect-square ${asset.image} relative flex items-center justify-center`}>
+                            <div className={`aspect-square ${tokenData.image} relative flex items-center justify-center`}>
                                 <button
                                     onClick={() => setPlaying(!playing)}
                                     className="h-20 w-20 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-primary hover:scale-110 transition-all shadow-lg"
@@ -159,12 +204,13 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                                     {playing ? <Pause fill="white" size={32} /> : <Play fill="white" size={32} className="ml-1" />}
                                 </button>
                                 <Badge className="absolute top-4 left-4 bg-black/50 backdrop-blur-md border-0 text-lg py-1 px-3">
-                                    {asset.genre}
+                                    {tokenData.genre}
                                 </Badge>
                             </div>
                             <div className="p-6">
                                 <h1 className="text-3xl font-bold mb-1">{asset.title}</h1>
-                                <p className="text-xl text-primary mb-4">{asset.artist}</p>
+                                <p className="text-xl text-primary mb-4 truncate" title={asset.artist as string}>{asset.artist}</p>
+                                <div className="text-xs text-muted-foreground mb-4 font-mono break-all">{asset.tokenAddress}</div>
 
                                 <div className="flex gap-4">
                                     <Button variant="outline" className="flex-1 border-white/10 gap-2">
@@ -193,10 +239,10 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                                 </div>
                                 <div className="flex gap-2">
                                     <Badge variant="secondary" className="bg-green-500/20 text-green-400 hover:bg-green-500/30">
-                                        <TrendingUp size={14} className="mr-1" /> +{asset.roi}% ROI
+                                        <TrendingUp size={14} className="mr-1" /> +{tokenData.roi}% ROI
                                     </Badge>
                                     <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30">
-                                        <Users size={14} className="mr-1" /> {asset.id * 123 + 50} Investors
+                                        <Users size={14} className="mr-1" /> {tokenData.id * 123 + 50} Investors
                                     </Badge>
                                 </div>
                             </div>
@@ -205,9 +251,9 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                                 <div className="bg-white/5 rounded-xl p-4">
                                     <div className="flex items-center gap-2 text-muted-foreground mb-2">
                                         <DollarSign size={16} />
-                                        <span className="text-sm">Market Cap</span>
+                                        <span className="text-sm">Available Tokens</span>
                                     </div>
-                                    <p className="text-xl font-bold">${(asset.totalTokens * asset.price).toLocaleString('en-US')}</p>
+                                    <p className="text-xl font-bold">{asset.availableTokens.toLocaleString()} {tokenSymbol as string}</p>
                                 </div>
                                 <div className="bg-white/5 rounded-xl p-4">
                                     <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -221,28 +267,28 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                                         <TrendingUp size={16} />
                                         <span className="text-sm">Est. Annual Yield</span>
                                     </div>
-                                    <p className="text-xl font-bold text-green-400">{asset.roi}%</p>
+                                    <p className="text-xl font-bold text-green-400">{tokenData.roi}%</p>
                                 </div>
                             </div>
 
                             <div className="mb-6">
                                 <h3 className="font-bold mb-4">About the Track</h3>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    {asset.description}
+                                    {tokenData.description}
                                 </p>
                             </div>
 
-                            {/* Fan Utility History */}
+                            {/* Fan Utility History - Mock Data */}
                             <div className="mb-6 pt-6 border-t border-white/10">
                                 <h3 className="font-bold mb-4 flex items-center gap-2">
                                     Fan Utility History <Badge variant="outline" className="text-xs font-normal">Perks & Voting</Badge>
                                 </h3>
                                 <div className="space-y-3">
-                                    {asset.utilityHistory.map((item) => (
+                                    {tokenData.utilityHistory.map((item) => (
                                         <div key={item.id} className="flex items-center gap-4 bg-white/5 p-3 rounded-lg hover:bg-white/10 transition-colors">
                                             <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${item.type === 'access' ? 'bg-purple-500/20 text-purple-400' :
-                                                    item.type === 'vote' ? 'bg-blue-500/20 text-blue-400' :
-                                                        'bg-pink-500/20 text-pink-400'
+                                                item.type === 'vote' ? 'bg-blue-500/20 text-blue-400' :
+                                                    'bg-pink-500/20 text-pink-400'
                                                 }`}>
                                                 {item.type === 'access' && <Ticket size={18} />}
                                                 {item.type === 'vote' && <Vote size={18} />}
@@ -277,179 +323,69 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                                     </div>
                                 </div>
                                 <div className="h-64 w-full">
-                                    <StreamingChart data={asset.streamingHistory} />
+                                    <StreamingChart data={tokenData.streamingHistory} />
                                 </div>
                             </div>
                         </GlassCard>
                     </div>
                 </div>
 
-                {/* Section 2: Trading Interface */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Trade Form */}
-                    <div className="lg:col-span-1">
-                        <GlassCard className="h-full">
-                            <Tabs defaultValue="buy" className="w-full" onValueChange={setActiveTab}>
-                                <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5">
-                                    <TabsTrigger
-                                        value="buy"
-                                        className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
-                                    >
-                                        Buy
-                                    </TabsTrigger>
-                                    <TabsTrigger
-                                        value="sell"
-                                        className="data-[state=active]:bg-red-500 data-[state=active]:text-white"
-                                    >
-                                        Sell
-                                    </TabsTrigger>
-                                </TabsList>
+                {/* Section 2: Buy Interface */}
+                <div className="max-w-xl mx-auto">
+                    <GlassCard>
+                        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                            <Wallet className="text-primary" />
+                            Buy Tokens
+                        </h2>
 
-                                <div className="space-y-6">
-                                    {/* Market Order Indicator */}
-                                    <div className="flex items-center gap-2 mb-4 p-3 bg-primary/10 rounded-lg border border-primary/20 text-primary">
-                                        <Zap size={16} fill="currentColor" />
-                                        <span className="text-sm font-bold">Market Mode Active</span>
-                                        <span className="ml-auto text-xs opacity-70">Best available price</span>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="price">Current Market Price (USDT)</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="price"
-                                                    type="number"
-                                                    value={asset.price}
-                                                    disabled
-                                                    className="bg-white/5 border-white/10 pr-12 font-bold opacity-80"
-                                                />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">USDT</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="amount">Amount</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="amount"
-                                                    type="number"
-                                                    value={amount}
-                                                    onChange={(e) => setAmount(Number(e.target.value))}
-                                                    className="bg-white/5 border-white/10 pr-12"
-                                                    min={1}
-                                                />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">Tokens</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                                                <span>0%</span>
-                                                <span>25%</span>
-                                                <span>50%</span>
-                                                <span>75%</span>
-                                                <span>100%</span>
-                                            </div>
-                                            <Slider
-                                                value={[amount]}
-                                                min={0}
-                                                max={asset.availableTokens}
-                                                step={1}
-                                                onValueChange={(vals) => setAmount(vals[0])}
-                                                className="py-2"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white/5 p-4 rounded-lg space-y-2 mt-4">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Available Balance</span>
-                                            <span>1,000.00 USDT</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Est. Fee</span>
-                                            <span>$2.00</span>
-                                        </div>
-                                        <div className="border-t border-white/10 my-2 pt-2 flex justify-between font-bold">
-                                            <span>Total (Est.)</span>
-                                            <span>${totalCost.toLocaleString()} USDT</span>
-                                        </div>
-                                    </div>
-
-                                    <Button
-                                        className={`w-full h-12 text-lg font-bold ${activeTab === 'buy'
-                                                ? 'bg-green-500 hover:bg-green-600'
-                                                : 'bg-red-500 hover:bg-red-600'
-                                            }`}
-                                        onClick={handleTrade}
-                                        disabled={isProcessing}
-                                    >
-                                        {isProcessing ? "Processing..." : `${activeTab === 'buy' ? 'Market Buy' : 'Market Sell'} Now`}
-                                    </Button>
-                                </div>
-                            </Tabs>
-                        </GlassCard>
-                    </div>
-
-                    {/* Order Book */}
-                    <div className="lg:col-span-2">
-                        <GlassCard className="h-full">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg">Order Book</h3>
-                                <div className="flex gap-2">
-                                    <div className="text-sm text-muted-foreground">Spread: <span className="text-foreground">0.5</span></div>
+                        <div className="space-y-6">
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-muted-foreground">Your USDC Balance</span>
+                                    <span className="font-mono font-bold text-green-400">
+                                        {usdcBalance ? formatUnits(usdcBalance, 6) : "0.00"} USDC
+                                    </span>
                                 </div>
                             </div>
 
-                            {/* Asks (Sellers) */}
-                            <div className="mb-2">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="border-white/10 hover:bg-transparent">
-                                            <TableHead className="text-left w-1/3">Price (USDT)</TableHead>
-                                            <TableHead className="text-right w-1/3">Amount</TableHead>
-                                            <TableHead className="text-right w-1/3">Total</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {mockOrderBook.asks.map((ask, i) => (
-                                            <TableRow key={i} className="border-0 hover:bg-white/5">
-                                                <TableCell className="text-red-400 font-mono py-1">{ask.price.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right font-mono py-1">{ask.amount}</TableCell>
-                                                <TableCell className="text-right font-mono py-1 text-muted-foreground">{ask.total.toLocaleString()}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="usdc-amount">Investment Amount (USDC)</Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="usdc-amount"
+                                            type="number"
+                                            placeholder="0.00"
+                                            value={usdcAmount}
+                                            onChange={(e) => setUsdcAmount(e.target.value)}
+                                            className="h-12 bg-black/20 border-white/10 text-lg pl-4 pr-16"
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                                            USDC
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Price: ${asset.price} per token
+                                    </p>
+                                </div>
 
-                            {/* Current Price Indicator */}
-                            <div className="py-3 px-4 my-2 bg-white/5 rounded flex justify-between items-center">
-                                <span className={`text-xl font-bold ${asset.roi > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                    ${asset.price.toFixed(2)}
-                                </span>
-                                <span className="text-sm text-muted-foreground">
-                                    ≈ ${asset.price.toFixed(2)} USD
-                                </span>
-                            </div>
+                                <div className="bg-primary/10 p-4 rounded-lg border border-primary/20 flex justify-between items-center">
+                                    <span className="text-sm font-medium">Estimated Tokens to Receive:</span>
+                                    <span className="text-xl font-bold text-primary">
+                                        {estimatedTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenSymbol as string}
+                                    </span>
+                                </div>
 
-                            {/* Bids (Buyers) */}
-                            <div>
-                                <Table>
-                                    <TableBody>
-                                        {mockOrderBook.bids.map((bid, i) => (
-                                            <TableRow key={i} className="border-0 hover:bg-white/5">
-                                                <TableCell className="text-green-400 font-mono py-1 w-1/3">{bid.price.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right font-mono py-1 w-1/3">{bid.amount}</TableCell>
-                                                <TableCell className="text-right font-mono py-1 w-1/3 text-muted-foreground">{bid.total.toLocaleString()}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                <Button
+                                    className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-500/20"
+                                    onClick={handleBuy}
+                                    disabled={!usdcAmount || Number(usdcAmount) <= 0 || isProcessing || !address}
+                                >
+                                    {isProcessing ? "Processing..." : "Buy Now"}
+                                </Button>
                             </div>
-                        </GlassCard>
-                    </div>
+                        </div>
+                    </GlassCard>
                 </div>
             </main>
             <Footer />

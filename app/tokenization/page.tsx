@@ -33,7 +33,9 @@ export default function Tokenization() {
     const { useGetAllListings } = usePlatform();
     const { data: listings, isLoading: isListingsLoading } = useGetAllListings();
 
-    const activeListings = listings?.filter((l: Listing) => l.active) || [];
+    const activeListings = listings?.map((l: Listing, index: number) => ({ ...l, id: index }))
+        .filter((l: any) => l.active)
+        .reverse() || [];
 
     // Fetch token details for all active listings
     const { data: tokenData, isLoading: isTokenDataLoading } = useReadContracts({
@@ -115,18 +117,18 @@ export default function Tokenization() {
                                         </td>
                                     </tr>
                                 ) : activeListings && activeListings.length > 0 ? (
-                                    activeListings.map((listing: Listing, index: number) => {
+                                    activeListings.map((listing: any, index: number) => {
                                         const tokenName = tokenData?.[index]?.result as string || "Unknown Token";
 
                                         return (
                                             <motion.tr
-                                                key={index}
+                                                key={listing.id}
                                                 initial={{ opacity: 0, y: 20 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ duration: 0.3, delay: index * 0.1 }}
                                                 whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                                                 className="border-b border-white/5 cursor-pointer relative"
-                                                onClick={() => router.push(`/tokenization/${index}`)}
+                                                onClick={() => router.push(`/tokenization/${listing.id}`)}
                                             >
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-3">
@@ -147,7 +149,7 @@ export default function Tokenization() {
                                                 </td>
                                                 <td className="p-4 text-right">
                                                     <Button asChild variant="ghost" size="sm">
-                                                        <Link href={`/tokenization/${index}`} onClick={(e) => e.stopPropagation()}>Detail</Link>
+                                                        <Link href={`/tokenization/${listing.id}`} onClick={(e) => e.stopPropagation()}>Detail</Link>
                                                     </Button>
                                                 </td>
                                             </motion.tr>

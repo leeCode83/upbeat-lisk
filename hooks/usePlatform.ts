@@ -158,12 +158,33 @@ export const usePlatform = () => {
                 fromBlock: BigInt(30503759)
             });
 
-            return logs.map(log => ({
-                tokenAddress: log.args.tokenAddress,
-                name: log.args.name,
-                symbol: log.args.symbol,
-                transactionHash: log.transactionHash
+            // Fetch balances for each token
+            const tokensWithBalance = await Promise.all(logs.map(async (log) => {
+                let balance = BigInt(0);
+                try {
+                    // We need to read the balance from the token contract itself
+                    // Using the TOKEN_ABI which should contain balanceOf
+                    const balanceResult = await publicClient.readContract({
+                        address: log.args.tokenAddress as Address,
+                        abi: TOKEN_ABI,
+                        functionName: "balanceOf",
+                        args: [userAddress]
+                    });
+                    balance = balanceResult as bigint;
+                } catch (e) {
+                    console.warn(`Failed to fetch balance for ${log.args.tokenAddress}`, e);
+                }
+
+                return {
+                    tokenAddress: log.args.tokenAddress,
+                    name: log.args.name,
+                    symbol: log.args.symbol,
+                    transactionHash: log.transactionHash,
+                    balance: balance
+                };
             }));
+
+            return tokensWithBalance;
         } catch (error) {
             console.error("Failed to fetch user tokens:", error);
             return [];
