@@ -6,7 +6,7 @@ import { GradientText } from "@/components/shared/GradientText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Info, Music, DollarSign, Wallet, RefreshCw, ListPlus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useAccount } from "wagmi";
@@ -14,7 +14,7 @@ import { Address, parseUnits, formatUnits } from "viem";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PLATFORM_ADDRESS } from "@/lib/contracts";
 
-export default function CreateTokenizationPage() {
+function CreateTokenizationContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { createMusicToken, getUserTokens, approveToken, listToken, isLoading } = usePlatform();
@@ -338,5 +338,13 @@ export default function CreateTokenizationPage() {
             </main>
             <Footer />
         </div>
+    );
+}
+
+export default function CreateTokenizationPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+            <CreateTokenizationContent />
+        </Suspense>
     );
 }

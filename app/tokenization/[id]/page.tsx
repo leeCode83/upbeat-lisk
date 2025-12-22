@@ -1,5 +1,7 @@
 "use client";
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -9,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Play, Pause, ArrowLeft, Share2, Heart, Clock, DollarSign, TrendingUp, Users, Wallet, Zap, Ticket, Vote, Gift } from "lucide-react";
+import { Play, Pause, ArrowLeft, Share2, Heart, Clock, DollarSign, TrendingUp, Users, Wallet, Zap, Ticket, Vote, Gift, Copy, ExternalLink } from "lucide-react";
 import { useState, use, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -112,6 +114,32 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
     });
 
     const [playing, setPlaying] = useState(false);
+    const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        // Use a high-quality copyright-free track for dummy playback
+        const newAudio = new Audio("https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3");
+        newAudio.volume = 0.5;
+        // Reset playing state when audio ends
+        newAudio.onended = () => setPlaying(false);
+        setAudio(newAudio);
+
+        return () => {
+            newAudio.pause();
+            newAudio.currentTime = 0;
+        };
+    }, []);
+
+    const togglePlay = () => {
+        if (!audio) return;
+
+        if (playing) {
+            audio.pause();
+        } else {
+            audio.play();
+        }
+        setPlaying(!playing);
+    };
 
     const router = useRouter();
     const [usdcAmount, setUsdcAmount] = useState("");
@@ -134,6 +162,16 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
         tokenAddress: listing?.tokenAddress,
         availableTokens: availableTokens,
         totalTokens: availableTokens, // Using available as total for now or fetch maxSupply
+    };
+
+    const handleCopy = (text: string, label: string) => {
+        navigator.clipboard.writeText(text);
+        toast.success(`${label} copied to clipboard`);
+    };
+
+    const formatAddress = (addr: string) => {
+        if (!addr) return "";
+        return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
     };
 
     const handleBuy = async () => {
@@ -198,7 +236,7 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                         <GlassCard className="p-0 overflow-hidden">
                             <div className={`aspect-square ${tokenData.image} relative flex items-center justify-center`}>
                                 <button
-                                    onClick={() => setPlaying(!playing)}
+                                    onClick={togglePlay}
                                     className="h-20 w-20 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-primary hover:scale-110 transition-all shadow-lg"
                                 >
                                     {playing ? <Pause fill="white" size={32} /> : <Play fill="white" size={32} className="ml-1" />}
@@ -209,8 +247,36 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                             </div>
                             <div className="p-6">
                                 <h1 className="text-3xl font-bold mb-1">{asset.title}</h1>
-                                <p className="text-xl text-primary mb-4 truncate" title={asset.artist as string}>{asset.artist}</p>
-                                <div className="text-xs text-muted-foreground mb-4 font-mono break-all">{asset.tokenAddress}</div>
+
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-muted-foreground text-sm">Artist:</span>
+                                    <div className="flex items-center gap-2 bg-white/5 px-2 py-1 rounded-md">
+                                        <span className="text-primary font-mono text-sm" title={asset.artist as string}>
+                                            {formatAddress(asset.artist as string)}
+                                        </span>
+                                        <button
+                                            onClick={() => handleCopy(asset.artist as string, "Artist Address")}
+                                            className="text-muted-foreground hover:text-white transition-colors"
+                                        >
+                                            <Copy size={12} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-muted-foreground text-sm">Token:</span>
+                                    <div className="flex items-center gap-2 bg-white/5 px-2 py-1 rounded-md">
+                                        <span className="text-muted-foreground font-mono text-xs" title={asset.tokenAddress}>
+                                            {formatAddress(asset.tokenAddress)}
+                                        </span>
+                                        <button
+                                            onClick={() => handleCopy(asset.tokenAddress, "Token Address")}
+                                            className="text-muted-foreground hover:text-white transition-colors"
+                                        >
+                                            <Copy size={12} />
+                                        </button>
+                                    </div>
+                                </div>
 
                                 <div className="flex gap-4">
                                     <Button variant="outline" className="flex-1 border-white/10 gap-2">
@@ -269,6 +335,77 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                                     </div>
                                     <p className="text-xl font-bold text-green-400">{tokenData.roi}%</p>
                                 </div>
+                            </div>
+
+                            <div className="flex gap-4 mb-8">
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button className="flex-1 h-12 text-lg font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                                            <Wallet className="mr-2" size={20} /> Buy Token
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-md bg-zinc-900 border-white/10 text-white">
+                                        <DialogHeader>
+                                            <DialogTitle>Buy {tokenSymbol}</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-6 py-4">
+                                            <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-sm text-muted-foreground">Your USDC Balance</span>
+                                                    <span className="font-mono font-bold text-green-400">
+                                                        {usdcBalance ? formatUnits(usdcBalance, 6) : "0.00"} USDC
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="usdc-amount">Investment Amount (USDC)</Label>
+                                                    <div className="relative">
+                                                        <Input
+                                                            id="usdc-amount"
+                                                            type="number"
+                                                            placeholder="0.00"
+                                                            value={usdcAmount}
+                                                            min="0"
+                                                            onChange={(e) => setUsdcAmount(e.target.value.replace(/-/g, ""))}
+                                                            className="h-12 bg-black/20 border-white/10 text-lg pl-4 pr-16"
+                                                        />
+                                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                                                            USDC
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Price: ${asset.price} per token
+                                                    </p>
+                                                </div>
+
+                                                <div className="bg-primary/10 p-4 rounded-lg border border-primary/20 flex justify-between items-center">
+                                                    <span className="text-sm font-medium">Estimated Tokens:</span>
+                                                    <span className="text-xl font-bold text-primary">
+                                                        {estimatedTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenSymbol as string}
+                                                    </span>
+                                                </div>
+
+                                                <Button
+                                                    className="w-full h-12 font-bold bg-green-600 hover:bg-green-700"
+                                                    onClick={handleBuy}
+                                                    disabled={!usdcAmount || Number(usdcAmount) <= 0 || isProcessing || !address}
+                                                >
+                                                    {isProcessing ? "Processing..." : "Confirm Purchase"}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 h-12 border-white/10 hover:bg-white/5"
+                                    onClick={() => window.open(`https://sepolia-blockscout.lisk.com/address/${asset.tokenAddress}`, '_blank')}
+                                >
+                                    <ExternalLink className="mr-2" size={20} /> View in Blockscout
+                                </Button>
                             </div>
 
                             <div className="mb-6">
@@ -330,63 +467,7 @@ export default function TokenDetail({ params }: { params: Promise<{ id: string }
                     </div>
                 </div>
 
-                {/* Section 2: Buy Interface */}
-                <div className="max-w-xl mx-auto">
-                    <GlassCard>
-                        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                            <Wallet className="text-primary" />
-                            Buy Tokens
-                        </h2>
 
-                        <div className="space-y-6">
-                            <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm text-muted-foreground">Your USDC Balance</span>
-                                    <span className="font-mono font-bold text-green-400">
-                                        {usdcBalance ? formatUnits(usdcBalance, 6) : "0.00"} USDC
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="usdc-amount">Investment Amount (USDC)</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="usdc-amount"
-                                            type="number"
-                                            placeholder="0.00"
-                                            value={usdcAmount}
-                                            onChange={(e) => setUsdcAmount(e.target.value)}
-                                            className="h-12 bg-black/20 border-white/10 text-lg pl-4 pr-16"
-                                        />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
-                                            USDC
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Price: ${asset.price} per token
-                                    </p>
-                                </div>
-
-                                <div className="bg-primary/10 p-4 rounded-lg border border-primary/20 flex justify-between items-center">
-                                    <span className="text-sm font-medium">Estimated Tokens to Receive:</span>
-                                    <span className="text-xl font-bold text-primary">
-                                        {estimatedTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenSymbol as string}
-                                    </span>
-                                </div>
-
-                                <Button
-                                    className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-500/20"
-                                    onClick={handleBuy}
-                                    disabled={!usdcAmount || Number(usdcAmount) <= 0 || isProcessing || !address}
-                                >
-                                    {isProcessing ? "Processing..." : "Buy Now"}
-                                </Button>
-                            </div>
-                        </div>
-                    </GlassCard>
-                </div>
             </main>
             <Footer />
         </div>
