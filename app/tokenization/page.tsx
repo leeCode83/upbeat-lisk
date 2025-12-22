@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Search, Filter, Play, Pause, Music2, DollarSign, Activity, Layers } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 const stats = [
     { label: "Listed Tokens", value: "1,245", icon: Music2, color: "text-blue-400" },
@@ -22,20 +22,20 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useReadContracts } from "wagmi";
-import { TOKEN_ABI, Listing } from "@/lib/contracts"; // Added Listing import
+import { TOKEN_ABI, Listing } from "@/lib/contracts";
 import { formatUnits } from "viem";
-
-// mockAssets removed
-
+import { TokenListingsDialog } from "@/components/tokenization/TokenListingsDialog";
 
 export default function Tokenization() {
     const router = useRouter();
     const { useGetAllListings } = usePlatform();
     const { data: listings, isLoading: isListingsLoading } = useGetAllListings();
 
-    const activeListings = listings?.map((l: Listing, index: number) => ({ ...l, id: index }))
-        .filter((l: any) => l.active)
-        .reverse() || [];
+    const activeListings = useMemo(() => {
+        return listings?.map((l: Listing, index: number) => ({ ...l, id: index }))
+            .filter((l: any) => l.active)
+            .reverse() || [];
+    }, [listings]);
 
     // Fetch token details for all active listings
     const { data: tokenData, isLoading: isTokenDataLoading } = useReadContracts({
@@ -45,6 +45,63 @@ export default function Tokenization() {
             functionName: "name",
         })),
     });
+
+    const { data: tokenSymbolData } = useReadContracts({
+        contracts: activeListings.map((listing) => ({
+            address: listing.tokenAddress as `0x${string}`,
+            abi: TOKEN_ABI,
+            functionName: "symbol",
+        })),
+    });
+
+    // Aggregation Logic
+    const aggregatedTokens = useMemo(() => {
+        if (!activeListings) return [];
+
+        const tokenMap = new Map<string, {
+            tokenAddress: string;
+            tokenName: string;
+            tokenSymbol: string;
+            totalAmount: bigint;
+            minPrice: bigint;
+            maxPrice: bigint;
+            listings: any[];
+        }>();
+
+        activeListings.forEach((listing, index) => {
+            const tokenAddress = listing.tokenAddress as string;
+
+            // Safe access to token name and symbol
+            const tokenName = tokenData?.[index]?.result as string || "Unknown Token";
+            const tokenSymbol = tokenSymbolData?.[index]?.result as string || "SYM";
+
+            if (!tokenMap.has(tokenAddress)) {
+                tokenMap.set(tokenAddress, {
+                    tokenAddress,
+                    tokenName,
+                    tokenSymbol,
+                    totalAmount: listing.amount as unknown as bigint,
+                    minPrice: listing.pricePerToken as unknown as bigint,
+                    maxPrice: listing.pricePerToken as unknown as bigint,
+                    listings: [listing]
+                });
+            } else {
+                const existing = tokenMap.get(tokenAddress)!;
+
+                // Update Total Amount
+                existing.totalAmount = existing.totalAmount + (listing.amount as unknown as bigint);
+
+                // Update Price Range
+                const price = listing.pricePerToken as unknown as bigint;
+                if (price < existing.minPrice) existing.minPrice = price;
+                if (price > existing.maxPrice) existing.maxPrice = price;
+
+                existing.listings.push(listing);
+            }
+        });
+
+        return Array.from(tokenMap.values());
+    }, [activeListings, tokenData, tokenSymbolData]);
 
     const isLoading = isListingsLoading || isTokenDataLoading;
 
@@ -105,7 +162,7 @@ export default function Tokenization() {
                                 <tr>
                                     <th className="text-left p-4 text-sm font-medium text-muted-foreground">Asset</th>
                                     <th className="text-right p-4 text-sm font-medium text-muted-foreground">Price</th>
-                                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">Amount Available</th>
+                                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">Total Available</th>
                                     <th className="p-4"></th>
                                 </tr>
                             </thead>
@@ -116,41 +173,49 @@ export default function Tokenization() {
                                             Loading listings...
                                         </td>
                                     </tr>
-                                ) : activeListings && activeListings.length > 0 ? (
-                                    activeListings.map((listing: any, index: number) => {
-                                        const tokenName = tokenData?.[index]?.result as string || "Unknown Token";
+                                ) : aggregatedTokens && aggregatedTokens.length > 0 ? (
+                                    aggregatedTokens.map((token: any) => {
+
+                                        const isRange = token.minPrice !== token.maxPrice;
+                                        const priceDisplay = isRange
+                                            ? `$${formatUnits(token.minPrice, 6)} - $${formatUnits(token.maxPrice, 6)}`
+                                            : `$${formatUnits(token.minPrice, 6)}`;
 
                                         return (
                                             <motion.tr
-                                                key={listing.id}
+                                                key={token.tokenAddress}
                                                 initial={{ opacity: 0, y: 20 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.3, delay: index * 0.1 }}
+                                                transition={{ duration: 0.3 }}
                                                 whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
-                                                className="border-b border-white/5 cursor-pointer relative"
-                                                onClick={() => router.push(`/tokenization/${listing.id}`)}
+                                                className="border-b border-white/5 relative"
                                             >
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className={`h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold`}>
-                                                            {tokenName[0]}
+                                                            {token.tokenName[0]}
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold">{tokenName}</div>
-                                                            <div className="text-xs text-muted-foreground truncate max-w-[150px]">{listing.tokenAddress}</div>
+                                                            <div className="font-bold flex items-center gap-2">
+                                                                {token.tokenName}
+                                                                <Badge variant="outline" className="text-[10px] py-0 h-5 border-white/10">{token.tokenSymbol}</Badge>
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground truncate max-w-[150px]">{token.tokenAddress}</div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="p-4 text-right font-medium">
-                                                    ${formatUnits(listing.pricePerToken as unknown as bigint, 6)} USDC
+                                                    {priceDisplay} <span className="text-xs text-muted-foreground">USDC</span>
                                                 </td>
-                                                <td className="p-4 text-right font-medium">
-                                                    {formatUnits(listing.amount as unknown as bigint, 18)}
+                                                <td className="p-4 text-right font-medium font-mono">
+                                                    {formatUnits(token.totalAmount, 18)}
                                                 </td>
-                                                <td className="p-4 text-right">
-                                                    <Button asChild variant="ghost" size="sm">
-                                                        <Link href={`/tokenization/${listing.id}`} onClick={(e) => e.stopPropagation()}>Detail</Link>
-                                                    </Button>
+                                                <td className="p-4 text-right w-[150px]">
+                                                    <TokenListingsDialog
+                                                        tokenName={token.tokenName}
+                                                        tokenSymbol={token.tokenSymbol}
+                                                        listings={token.listings}
+                                                    />
                                                 </td>
                                             </motion.tr>
                                         );

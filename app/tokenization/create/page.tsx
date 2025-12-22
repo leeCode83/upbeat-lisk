@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Info, Music, DollarSign, Wallet, RefreshCw, ListPlus } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useAccount } from "wagmi";
 import { Address, parseUnits, formatUnits } from "viem";
@@ -16,6 +16,7 @@ import { PLATFORM_ADDRESS } from "@/lib/contracts";
 
 export default function CreateTokenizationPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { createMusicToken, getUserTokens, approveToken, listToken, isLoading } = usePlatform();
     const { address } = useAccount();
 
@@ -25,6 +26,15 @@ export default function CreateTokenizationPage() {
         maxSupply: "",
         artistAddress: "",
     });
+
+    const [activeTab, setActiveTab] = useState("create");
+
+    useEffect(() => {
+        const tab = searchParams.get("tab");
+        if (tab && (tab === "create" || tab === "my-tokens")) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
 
     // My Tokens Tab State
     const [userTokens, setUserTokens] = useState<any[]>([]);
@@ -74,7 +84,8 @@ export default function CreateTokenizationPage() {
             if (success) {
                 // Refresh tokens after creation
                 fetchUserTokens();
-                // Optional: switch to "my-tokens" tab logic could be added here
+                // Switch to "my-tokens" tab
+                setActiveTab("my-tokens");
             }
         } catch (error) {
             console.error("Failed to create token:", error);
@@ -132,7 +143,7 @@ export default function CreateTokenizationPage() {
                 </div>
 
                 <div className="max-w-4xl mx-auto">
-                    <Tabs defaultValue="create" className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-2 mb-8 bg-white/5 border border-white/10">
                             <TabsTrigger value="create">Create New Token</TabsTrigger>
                             <TabsTrigger value="my-tokens">My Tokens</TabsTrigger>

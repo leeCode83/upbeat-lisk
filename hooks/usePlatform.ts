@@ -258,6 +258,69 @@ export const usePlatform = () => {
         }
     };
 
+    const getUserListings = async (userAddress: Address) => {
+        if (!publicClient) return [];
+
+        try {
+            const listedEvents = await publicClient.getContractEvents({
+                address: PLATFORM_ADDRESS as Address,
+                abi: PLATFORM_ABI,
+                eventName: "TokenListed",
+                args: { seller: userAddress }, // Correct argument filter for seller
+                fromBlock: BigInt(30503759)
+            });
+
+            const listingsData = await Promise.all(listedEvents.map(async (event) => {
+                const listingId = event.args.listingId!;
+
+                // Fetch current listing state
+                const listingStruct = await publicClient.readContract({
+                    address: PLATFORM_ADDRESS as Address,
+                    abi: PLATFORM_ABI,
+                    functionName: "listings",
+                    args: [listingId]
+                }) as [Address, Address, bigint, bigint, boolean]; // seller, tokenAddress, amount, pricePerToken, active
+
+                // Fetch token details
+                // We can optimize this by caching or using a map if many listings interact with same token
+                // For now, individual calls are safer for correctness
+                const [name, symbol] = await Promise.all([
+                    publicClient.readContract({
+                        address: listingStruct[1], // tokenAddress
+                        abi: TOKEN_ABI,
+                        functionName: "name"
+                    }) as Promise<string>,
+                    publicClient.readContract({
+                        address: listingStruct[1], // tokenAddress
+                        abi: TOKEN_ABI,
+                        functionName: "symbol"
+                    }) as Promise<string>
+                ]);
+
+                // Fetch block for timestamp
+                const block = await publicClient.getBlock({ blockNumber: event.blockNumber });
+                const date = new Date(Number(block.timestamp) * 1000).toLocaleDateString();
+
+                return {
+                    id: listingId,
+                    tokenName: name,
+                    tokenSymbol: symbol,
+                    listDate: date,
+                    initialAmount: event.args.amount!, // Amount from event is initial
+                    remainingAmount: listingStruct[2], // Amount from struct is current remaining
+                    price: listingStruct[3],
+                    active: listingStruct[4]
+                };
+            }));
+
+            // Sort by ID descending (newest first)
+            return listingsData.sort((a, b) => Number(b.id) - Number(a.id));
+        } catch (error) {
+            console.error("Failed to fetch user listings:", error);
+            return [];
+        }
+    };
+
     const getUserActivity = async (userAddress: Address) => {
         if (!publicClient) return [];
 
@@ -334,6 +397,7 @@ export const usePlatform = () => {
         useGetListings,
         getUserTokens,
         getUserPortfolio,
-        getUserActivity
+        getUserActivity,
+        getUserListings
     };
 };

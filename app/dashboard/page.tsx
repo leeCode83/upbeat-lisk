@@ -9,24 +9,60 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowUpRight, Disc, DollarSign, Music, Wallet } from "lucide-react";
+import { ArrowUpRight, Disc, DollarSign, Music, Wallet, ListChecks } from "lucide-react";
 
 import { usePlatform } from "@/hooks/usePlatform";
 import { RevenueClaimDialog } from "@/components/dashboard/RevenueClaimDialog";
+import { TokenDetailDialog } from "@/components/dashboard/TokenDetailDialog";
 import { useAccount } from "wagmi";
 import { useState, useEffect } from "react";
 import { formatUnits } from "viem";
+import { useToken } from "@/hooks/useToken";
+
+// Component for rendering a token row to use hooks
+const TokenRow = ({ token }: { token: any }) => {
+    const { useTotalSupply } = useToken();
+    const { data: totalSupply } = useTotalSupply(token.tokenAddress);
+
+    return (
+        <tr className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+            <td className="p-4">
+                <div className="font-bold">{token.name}</div>
+            </td>
+            <td className="p-4">
+                <div className="font-mono text-sm text-muted-foreground">{token.symbol}</div>
+            </td>
+            <td className="p-4 text-right font-mono">
+                {totalSupply ? Number(formatUnits(totalSupply, 18)).toLocaleString() : "..."}
+            </td>
+            <td className="p-4 text-right">
+                <TokenDetailDialog
+                    tokenAddress={token.tokenAddress}
+                    tokenSymbol={token.symbol}
+                    tokenName={token.name}
+                />
+            </td>
+        </tr>
+    );
+};
 
 export default function Dashboard() {
-    const { getUserPortfolio, getUserActivity } = usePlatform();
+    const { getUserPortfolio, getUserActivity, getUserTokens, getUserListings } = usePlatform();
     const { address } = useAccount();
     const [portfolio, setPortfolio] = useState<any[]>([]);
     const [activity, setActivity] = useState<any[]>([]);
+    const [myTokens, setMyTokens] = useState<any[]>([]);
+    const [myListings, setMyListings] = useState<any[]>([]);
     const [isLoadingPortfolio, setIsLoadingPortfolio] = useState(false);
+    const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+    const [isLoadingListings, setIsLoadingListings] = useState(false);
 
     useEffect(() => {
         if (address) {
             setIsLoadingPortfolio(true);
+            setIsLoadingTokens(true);
+            setIsLoadingListings(true);
+
             getUserPortfolio(address).then(data => {
                 setPortfolio(data);
                 setIsLoadingPortfolio(false);
@@ -34,8 +70,17 @@ export default function Dashboard() {
             getUserActivity(address).then(data => {
                 setActivity(data);
             });
+            getUserTokens(address).then(data => {
+                setMyTokens([...data].reverse());
+                setIsLoadingTokens(false);
+            });
+            getUserListings(address).then(data => {
+                setMyListings(data);
+                setIsLoadingListings(false);
+            });
         }
     }, [address]);
+
     return (
         <div className="min-h-screen flex flex-col bg-background text-foreground">
             {/* <Navbar /> */}
@@ -121,84 +166,115 @@ export default function Dashboard() {
                     </TabsList>
 
                     <TabsContent value="tokenize" className="space-y-8">
-                        {/* Section 0: Pending Tokenization */}
-                        <div>
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-xl font-bold flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
-                                    Pending Tokenization
-                                </h3>
-                            </div>
-                            <div className="space-y-4">
-                                {[
-                                    { id: 0, title: "Lost in Echoes", stage: "Minting Policy ID", progress: 75, date: "2024-12-19" },
-                                    { id: 1, title: "Solar Flares", stage: "Metadata Verification", progress: 40, date: "2024-12-18" }
-                                ].map((item) => (
-                                    <GlassCard key={item.id} className="flex items-center gap-4 p-4 border-l-4 border-l-yellow-500">
-                                        <div className="h-12 w-12 rounded-lg bg-yellow-500/20 flex items-center justify-center text-yellow-500">
-                                            <Disc size={24} className="animate-spin-slow" />
-                                        </div>
-                                        <div className="flex-grow">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <div>
-                                                    <div className="font-bold">{item.title}</div>
-                                                    <div className="text-xs text-muted-foreground">Started: {item.date}</div>
-                                                </div>
-                                                <span className="text-xs font-medium text-yellow-500 px-2 py-1 bg-yellow-500/10 rounded-full">
-                                                    {item.stage}
-                                                </span>
-                                            </div>
-                                            <div className="w-full bg-white/10 rounded-full h-1.5 mt-2">
-                                                <div
-                                                    className="bg-yellow-500 h-1.5 rounded-full transition-all duration-1000"
-                                                    style={{ width: `${item.progress}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </GlassCard>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Section 1: Tokenized User Songs */}
+                        {/* List of Deployed Tokens */}
                         <div>
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-xl font-bold flex items-center gap-2">
                                     <Disc size={20} className="text-pink-500" />
-                                    Your Tokenized Songs
+                                    Your Deployed Tokens
                                 </h3>
-                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                                    View All
-                                </Button>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {[
-                                    { id: 101, title: "Midnight Dreams", ticker: "MND", price: 50.00, change: 12.5, image: "bg-gradient-to-br from-purple-500 to-pink-500" },
-                                    { id: 102, title: "Neon City Lights", ticker: "NCL", price: 35.00, change: -2.4, image: "bg-gradient-to-br from-fuchsia-600 to-purple-600" },
-                                    { id: 103, title: "Cyber Punk 2077", ticker: "CPK", price: 85.00, change: 15.4, image: "bg-gradient-to-br from-pink-500 to-rose-600" }
-                                ].map((item) => (
-                                    <GlassCard key={item.id} className="p-4 hover:bg-white/5 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className={`h-10 w-10 rounded-full ${item.image} flex items-center justify-center text-xs font-bold shadow-lg`}>
-                                                {item.ticker[0]}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold group-hover:text-primary transition-colors">{item.title}</div>
-                                                <div className="text-xs text-muted-foreground">{item.ticker}</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-end">
-                                            <div>
-                                                <div className="text-xs text-muted-foreground mb-1">Current Price</div>
-                                                <div className="font-bold">${item.price.toFixed(2)}</div>
-                                            </div>
-                                            <div className={`text-xs font-medium ${item.change >= 0 ? 'text-green-400' : 'text-red-400'} flex items-center`}>
-                                                {item.change >= 0 ? '+' : ''}{item.change}%
-                                                {item.change >= 0 ? <ArrowUpRight size={12} className="ml-1" /> : null}
-                                            </div>
-                                        </div>
-                                    </GlassCard>
-                                ))}
+
+                            <div className="overflow-x-auto rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm mb-8">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-white/5 text-muted-foreground text-left">
+                                        <tr>
+                                            <th className="p-4 font-medium">Token Name</th>
+                                            <th className="p-4 font-medium">Symbol</th>
+                                            <th className="p-4 font-medium text-right">Total Supply</th>
+                                            <th className="p-4 font-medium text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {isLoadingTokens ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                                    Loading tokens...
+                                                </td>
+                                            </tr>
+                                        ) : myTokens.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                                    You haven't deployed any tokens yet.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            myTokens.map((token: any) => (
+                                                <TokenRow key={token.tokenAddress} token={token} />
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* List of Listings */}
+                            <div>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-xl font-bold flex items-center gap-2">
+                                        <ListChecks size={20} className="text-blue-500" />
+                                        Your Listings
+                                    </h3>
+                                </div>
+                                <div className="overflow-x-auto rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-white/5 text-muted-foreground text-left">
+                                            <tr>
+                                                <th className="p-4 font-medium">Token</th>
+                                                <th className="p-4 font-medium">Listed Date</th>
+                                                <th className="p-4 font-medium text-right">Initial Amount</th>
+                                                <th className="p-4 font-medium text-right">Remaining</th>
+                                                <th className="p-4 font-medium text-right">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {isLoadingListings ? (
+                                                <tr>
+                                                    <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                                                        Loading listing history...
+                                                    </td>
+                                                </tr>
+                                            ) : myListings.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                                                        No listing history found.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                myListings.map((listing: any) => (
+                                                    <tr key={listing.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                                                        <td className="p-4">
+                                                            <div className="font-bold">{listing.tokenName}</div>
+                                                            <div className="text-xs text-muted-foreground">{listing.tokenSymbol}</div>
+                                                        </td>
+                                                        <td className="p-4">
+                                                            {listing.listDate}
+                                                        </td>
+                                                        <td className="p-4 text-right font-mono text-muted-foreground">
+                                                            {Number(formatUnits(listing.initialAmount, 18)).toLocaleString()}
+                                                        </td>
+                                                        <td className="p-4 text-right font-mono font-bold">
+                                                            {Number(formatUnits(listing.remainingAmount, 18)).toLocaleString()}
+                                                        </td>
+                                                        <td className="p-4 text-right">
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${listing.active
+                                                                    ? 'bg-green-500/10 text-green-500'
+                                                                    : listing.remainingAmount === 0
+                                                                        ? 'bg-blue-500/10 text-blue-500' // Sold out
+                                                                        : 'bg-red-500/10 text-red-500' // Cancelled
+                                                                }`}>
+                                                                {listing.active
+                                                                    ? 'Active'
+                                                                    : listing.remainingAmount === 0
+                                                                        ? 'Sold Out'
+                                                                        : 'Cancelled'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </TabsContent>
