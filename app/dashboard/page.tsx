@@ -11,7 +11,31 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowUpRight, Disc, DollarSign, Music, Wallet } from "lucide-react";
 
+import { usePlatform } from "@/hooks/usePlatform";
+import { RevenueClaimDialog } from "@/components/dashboard/RevenueClaimDialog";
+import { useAccount } from "wagmi";
+import { useState, useEffect } from "react";
+import { formatUnits } from "viem";
+
 export default function Dashboard() {
+    const { getUserPortfolio, getUserActivity } = usePlatform();
+    const { address } = useAccount();
+    const [portfolio, setPortfolio] = useState<any[]>([]);
+    const [activity, setActivity] = useState<any[]>([]);
+    const [isLoadingPortfolio, setIsLoadingPortfolio] = useState(false);
+
+    useEffect(() => {
+        if (address) {
+            setIsLoadingPortfolio(true);
+            getUserPortfolio(address).then(data => {
+                setPortfolio(data);
+                setIsLoadingPortfolio(false);
+            });
+            getUserActivity(address).then(data => {
+                setActivity(data);
+            });
+        }
+    }, [address]);
     return (
         <div className="min-h-screen flex flex-col bg-background text-foreground">
             {/* <Navbar /> */}
@@ -198,28 +222,52 @@ export default function Dashboard() {
                                         <tr>
                                             <th className="p-3 font-medium">Token</th>
                                             <th className="p-3 font-medium text-right">Balance</th>
-                                            <th className="p-3 font-medium text-right">Value</th>
-                                            <th className="p-3 font-medium text-right">Change</th>
+                                            <th className="p-3 font-medium text-right">Value (USDC)</th>
+                                            <th className="p-3 font-medium text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {[
-                                            { id: 201, name: "Acoustic Soul", ticker: "ACS", balance: 50, price: 25.00, change: 5.8 },
-                                            { id: 202, name: "Electric Horizon", ticker: "ELH", balance: 20, price: 42.50, change: 8.2 },
-                                            { id: 203, name: "Jazz Cafe", ticker: "JZC", balance: 10, price: 60.00, change: 1.5 },
-                                        ].map((token) => (
-                                            <tr key={token.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                                                <td className="p-3">
-                                                    <div className="font-medium">{token.name}</div>
-                                                    <div className="text-xs text-muted-foreground">{token.ticker}</div>
-                                                </td>
-                                                <td className="p-3 text-right">{token.balance}</td>
-                                                <td className="p-3 text-right font-medium">${(token.balance * token.price).toLocaleString()}</td>
-                                                <td className={`p-3 text-right ${token.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                    {token.change >= 0 ? '+' : ''}{token.change}%
+                                        {isLoadingPortfolio ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                                    Loading portfolio...
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : portfolio.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                                    You don't own any tokens yet.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            portfolio.map((token: any) => {
+                                                // Calculate Value: (Balance * Price) / 1e18 (to adjust for token decimals)
+                                                // Result is in USDC decimals (6)
+                                                const value = (BigInt(token.balance) * BigInt(token.price)) / (BigInt(10) ** BigInt(18));
+
+                                                return (
+                                                    <tr key={token.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                                                        <td className="p-3">
+                                                            <div className="font-medium">{token.name}</div>
+                                                            <div className="text-xs text-muted-foreground">{token.symbol}</div>
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            {Number(formatUnits(token.balance, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="p-3 text-right font-medium">
+                                                            ${Number(formatUnits(value, 6)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            <RevenueClaimDialog
+                                                                tokenAddress={token.tokenAddress}
+                                                                tokenSymbol={token.symbol}
+                                                                tokenName={token.name}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -264,20 +312,41 @@ export default function Dashboard() {
                     <TabsContent value="activity">
                         <GlassCard>
                             <div className="space-y-4">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="flex items-center justify-between border-b border-white/5 pb-4 last:border-0 last:pb-0">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">
-                                                <DollarSign size={16} />
+                                {activity.length === 0 ? (
+                                    <div className="text-center text-muted-foreground py-8">
+                                        No recent activity found.
+                                    </div>
+                                ) : (
+                                    activity.map((item, i) => (
+                                        <div key={i} className="flex items-center justify-between border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">
+                                                    {item.type === "Created Token" && <Disc size={16} className="text-pink-500" />}
+                                                    {item.type === "Listed Token" && <DollarSign size={16} className="text-yellow-500" />}
+                                                    {item.type === "Bought Token" && <Wallet size={16} className="text-green-500" />}
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium">{item.description}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Block: {Number(item.blockNumber)}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-medium">Revenue Distribution</p>
-                                                <p className="text-xs text-muted-foreground">Midnight Dreams - Oct 2024</p>
+                                            <div className="text-right">
+                                                {item.value && (
+                                                    <span className="font-bold text-green-400 block">
+                                                        {item.type === "Bought Token" ? "-" : "+"}${Number(formatUnits(item.value, 6)).toLocaleString()}
+                                                    </span>
+                                                )}
+                                                {item.amount && (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {Number(formatUnits(item.amount, 18)).toLocaleString()} Tokens
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
-                                        <span className="font-bold text-green-400">+$45.20</span>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         </GlassCard>
                     </TabsContent>
