@@ -14,6 +14,7 @@ const navItems = [
     { name: "Sync Catalog", href: "/sync-catalog" },
     { name: "Token Market", href: "/tokenization" },
     { name: "Tokenize", href: "/tokenization/create" },
+    { name: "Vote", href: "/voting" },
     { name: "About", href: "/about" },
     { name: "Dashboard", href: "/dashboard" },
 ];
