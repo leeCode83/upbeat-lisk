@@ -21,19 +21,21 @@ Artists get instant funding for their projects without signing away their creati
 *   Customizable parameters: Percentage of rights to sell, total valuation, and fundraising goals.
 *   Secure legal binding via embedded metadata and terms.
 
-### 2. Sync Catalog Marketplace
+### 2. Fan Engagement & Governance
+*   Token holders gain access to exclusive perks (VIP tickets, meet & greets).
+*   **DAO Voting**: Fans can vote on key decisions, such as which singles to release next or tour locations.
+
+## Future Roadmap
+
+### 1. Sync Catalog Marketplace
 *   A premium marketplace for licensing master recordings for film, TV, and ads.
 *   **Direct Licensing**: Buyers can purchase "Perpetual" licenses instantly via smart contracts.
 *   **Transparent Pricing**: Clear, upfront costs for different usage types (Commercial, Film, etc.).
 
-### 3. DeFi Lending for Artists
+### 2. DeFi Lending for Artists
 *   **Collateralized Loans**: Artists can use their future streaming revenue or unsold tokens as collateral.
 *   **Instant Liquidity**: Get access to capital without selling permanent equity.
 *   **Algorithmic Risk Assessment**: Borrowing limits based on historical streaming data.
-
-### 4. Fan Engagement & Governance
-*   Token holders gain access to exclusive perks (VIP tickets, meet & greets).
-*   **DAO Voting**: Fans can vote on key decisions, such as which singles to release next or tour locations.
 
 ## Business Model
 
@@ -56,13 +58,13 @@ Upbeats operates on a sustainable transaction-based model:
 ## Technical Stack
 *   **Frontend**: Next.js 16 (Turbopack), React 19, TailwindCSS, Framer Motion.
 *   **Smart Contracts**: Solidity (ERC20, Factory Pattern), OpenZeppelin.
-*   **Blockchain**: Story Aeneid Testnet.
+*   **Blockchain**: Lisk Sepolia Testnet.
 
 ## Deployed Contracts
 
 | Network | Contract Name | Address |
 | :--- | :--- | :--- |
-| **Story Aeneid Testnet** | MusicPlatform | `0x857a7a0929DDbFc9433aFEa3EF103a04B4dA2e2A` |
+| **Lisk Sepolia Testnet** | MusicPlatform | `0x857a7a0929DDbFc9433aFEa3EF103a04B4dA2e2A` |
 
 ## Getting Started
 
