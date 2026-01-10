@@ -143,23 +143,62 @@ export const usePlatform = () => {
         });
     }
 
+    // Helper for batched log fetching
+    const getEvents = async (
+        address: Address,
+        abi: any,
+        eventName: string,
+        args: any,
+        fromBlock: bigint
+    ) => {
+        if (!publicClient) return [];
+        try {
+            const currentBlock = await publicClient.getBlockNumber();
+            const logs = [];
+            let start = fromBlock;
+            // Use a safe chunk size (e.g. 50,000) to stay well under the 100,000 limit
+            const limit = BigInt(50000);
+
+            while (start <= currentBlock) {
+                const end = start + limit > currentBlock ? currentBlock : start + limit;
+
+                try {
+                    const chunk = await publicClient.getContractEvents({
+                        address,
+                        abi,
+                        eventName,
+                        args,
+                        fromBlock: start,
+                        toBlock: end
+                    });
+                    logs.push(...chunk);
+                } catch (e) {
+                    console.error(`Failed to fetch logs from ${start} to ${end}`, e);
+                }
+
+                start = end + BigInt(1);
+            }
+            return logs;
+        } catch (error) {
+            console.error("Failed to setup log fetching:", error);
+            return [];
+        }
+    };
 
     const getUserTokens = async (userAddress: Address) => {
         if (!publicClient) return [];
 
         try {
-            const logs = await publicClient.getContractEvents({
-                address: PLATFORM_ADDRESS as Address,
-                abi: PLATFORM_ABI,
-                eventName: "MusicTokenCreated",
-                args: {
-                    creator: userAddress
-                },
-                fromBlock: BigInt(30503759)
-            });
+            const logs = await getEvents(
+                PLATFORM_ADDRESS as Address,
+                PLATFORM_ABI,
+                "MusicTokenCreated",
+                { creator: userAddress },
+                BigInt(30503759)
+            );
 
             // Fetch balances for each token
-            const tokensWithBalance = await Promise.all(logs.map(async (log) => {
+            const tokensWithBalance = await Promise.all(logs.map(async (log: any) => {
                 let balance = BigInt(0);
                 try {
                     // We need to read the balance from the token contract itself
@@ -196,12 +235,13 @@ export const usePlatform = () => {
 
         try {
             // 1. Get all created tokens (global)
-            const logs = await publicClient.getContractEvents({
-                address: PLATFORM_ADDRESS as Address,
-                abi: PLATFORM_ABI,
-                eventName: "MusicTokenCreated",
-                fromBlock: BigInt(30503759)
-            });
+            const logs = await getEvents(
+                PLATFORM_ADDRESS as Address,
+                PLATFORM_ABI,
+                "MusicTokenCreated",
+                undefined,
+                BigInt(30503759)
+            );
 
             // 2. Get all active listings to map prices
             let priceMap: { [key: string]: bigint } = {};
@@ -222,7 +262,7 @@ export const usePlatform = () => {
             }
 
             // 3. Check balance for each token
-            const portfolio = await Promise.all(logs.map(async (log) => {
+            const portfolio = await Promise.all(logs.map(async (log: any) => {
                 let balance = BigInt(0);
                 try {
                     const balanceResult = await publicClient.readContract({
@@ -262,59 +302,61 @@ export const usePlatform = () => {
         if (!publicClient) return [];
 
         try {
-            const listedEvents = await publicClient.getContractEvents({
-                address: PLATFORM_ADDRESS as Address,
-                abi: PLATFORM_ABI,
-                eventName: "TokenListed",
-                args: { seller: userAddress }, // Correct argument filter for seller
-                fromBlock: BigInt(30503759)
-            });
+            const listedEvents = await getEvents(
+                PLATFORM_ADDRESS as Address,
+                PLATFORM_ABI,
+                "TokenListed",
+                { seller: userAddress }, // Correct argument filter for seller
+                BigInt(30503759)
+            );
 
-            const listingsData = await Promise.all(listedEvents.map(async (event) => {
+            const listingsData = await Promise.all(listedEvents.map(async (event: any) => {
                 const listingId = event.args.listingId!;
 
                 // Fetch current listing state
-                const listingStruct = await publicClient.readContract({
-                    address: PLATFORM_ADDRESS as Address,
-                    abi: PLATFORM_ABI,
-                    functionName: "listings",
-                    args: [listingId]
-                }) as [Address, Address, bigint, bigint, boolean]; // seller, tokenAddress, amount, pricePerToken, active
+                try {
+                    const listingStruct = await publicClient.readContract({
+                        address: PLATFORM_ADDRESS as Address,
+                        abi: PLATFORM_ABI,
+                        functionName: "listings",
+                        args: [listingId]
+                    }) as [Address, Address, bigint, bigint, boolean]; // seller, tokenAddress, amount, pricePerToken, active
 
-                // Fetch token details
-                // We can optimize this by caching or using a map if many listings interact with same token
-                // For now, individual calls are safer for correctness
-                const [name, symbol] = await Promise.all([
-                    publicClient.readContract({
-                        address: listingStruct[1], // tokenAddress
-                        abi: TOKEN_ABI,
-                        functionName: "name"
-                    }) as Promise<string>,
-                    publicClient.readContract({
-                        address: listingStruct[1], // tokenAddress
-                        abi: TOKEN_ABI,
-                        functionName: "symbol"
-                    }) as Promise<string>
-                ]);
+                    // Fetch token details
+                    const [name, symbol] = await Promise.all([
+                        publicClient.readContract({
+                            address: listingStruct[1], // tokenAddress
+                            abi: TOKEN_ABI,
+                            functionName: "name"
+                        }) as Promise<string>,
+                        publicClient.readContract({
+                            address: listingStruct[1], // tokenAddress
+                            abi: TOKEN_ABI,
+                            functionName: "symbol"
+                        }) as Promise<string>
+                    ]);
 
-                // Fetch block for timestamp
-                const block = await publicClient.getBlock({ blockNumber: event.blockNumber });
-                const date = new Date(Number(block.timestamp) * 1000).toLocaleDateString();
+                    // Fetch block for timestamp
+                    const block = await publicClient.getBlock({ blockNumber: event.blockNumber });
+                    const date = new Date(Number(block.timestamp) * 1000).toLocaleDateString();
 
-                return {
-                    id: listingId,
-                    tokenName: name,
-                    tokenSymbol: symbol,
-                    listDate: date,
-                    initialAmount: event.args.amount!, // Amount from event is initial
-                    remainingAmount: listingStruct[2], // Amount from struct is current remaining
-                    price: listingStruct[3],
-                    active: listingStruct[4]
-                };
+                    return {
+                        id: listingId,
+                        tokenName: name,
+                        tokenSymbol: symbol,
+                        listDate: date,
+                        initialAmount: event.args.amount!, // Amount from event is initial
+                        remainingAmount: listingStruct[2], // Amount from struct is current remaining
+                        price: listingStruct[3],
+                        active: listingStruct[4]
+                    };
+                } catch (e) {
+                    return null;
+                }
             }));
 
             // Sort by ID descending (newest first)
-            return listingsData.sort((a, b) => Number(b.id) - Number(a.id));
+            return listingsData.filter(x => x !== null).sort((a: any, b: any) => Number(b.id) - Number(a.id));
         } catch (error) {
             console.error("Failed to fetch user listings:", error);
             return [];
@@ -325,33 +367,33 @@ export const usePlatform = () => {
         if (!publicClient) return [];
 
         try {
-            const createdEvents = await publicClient.getContractEvents({
-                address: PLATFORM_ADDRESS as Address,
-                abi: PLATFORM_ABI,
-                eventName: "MusicTokenCreated",
-                args: { creator: userAddress },
-                fromBlock: BigInt(30503759)
-            });
+            const createdEvents = await getEvents(
+                PLATFORM_ADDRESS as Address,
+                PLATFORM_ABI,
+                "MusicTokenCreated",
+                { creator: userAddress },
+                BigInt(30503759)
+            );
 
-            const listedEvents = await publicClient.getContractEvents({
-                address: PLATFORM_ADDRESS as Address,
-                abi: PLATFORM_ABI,
-                eventName: "TokenListed",
-                args: { seller: userAddress },
-                fromBlock: BigInt(30503759)
-            });
+            const listedEvents = await getEvents(
+                PLATFORM_ADDRESS as Address,
+                PLATFORM_ABI,
+                "TokenListed",
+                { seller: userAddress },
+                BigInt(30503759)
+            );
 
-            const boughtEvents = await publicClient.getContractEvents({
-                address: PLATFORM_ADDRESS as Address,
-                abi: PLATFORM_ABI,
-                eventName: "TokenSold",
-                args: { buyer: userAddress },
-                fromBlock: BigInt(30503759)
-            });
+            const boughtEvents = await getEvents(
+                PLATFORM_ADDRESS as Address,
+                PLATFORM_ABI,
+                "TokenSold",
+                { buyer: userAddress },
+                BigInt(30503759)
+            );
 
             // Combine and format
             const activity = [
-                ...createdEvents.map(e => ({
+                ...createdEvents.map((e: any) => ({
                     type: "Created Token",
                     hash: e.transactionHash,
                     blockNumber: e.blockNumber,
@@ -359,7 +401,7 @@ export const usePlatform = () => {
                     amount: undefined,
                     value: undefined
                 })),
-                ...listedEvents.map(e => ({
+                ...listedEvents.map((e: any) => ({
                     type: "Listed Token",
                     hash: e.transactionHash,
                     blockNumber: e.blockNumber,
@@ -367,7 +409,7 @@ export const usePlatform = () => {
                     amount: e.args.amount,
                     value: e.args.price // This is price per token, maybe calculate total?
                 })),
-                ...boughtEvents.map(e => ({
+                ...boughtEvents.map((e: any) => ({
                     type: "Bought Token",
                     hash: e.transactionHash,
                     blockNumber: e.blockNumber,
