@@ -64,7 +64,8 @@ Upbeats operates on a sustainable transaction-based model:
 
 | Network | Contract Name | Address |
 | :--- | :--- | :--- |
-| **Lisk Sepolia Testnet** | MusicPlatform | `0x857a7a0929DDbFc9433aFEa3EF103a04B4dA2e2A` |
+| **Lisk Sepolia Testnet** | MusicPlatform | `0x855547B9e2f4035E2cfe95ba18e903DFdD51C8E9` |
+| **Lisk Sepolia Testnet** | USDC Contract | `0xB84BbbA3950098954257bDbcC3Aa86C01aAcD965` |
 
 ## Getting Started
 
